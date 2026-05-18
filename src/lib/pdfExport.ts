@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import type { GridPlan } from './geometry';
-import type { PosterLayout } from './posterLayout';
+import { getGlueMarks, type PosterLayout } from './posterLayout';
 
 export interface PdfExportOptions {
   image: CanvasImageSource;
@@ -9,6 +9,7 @@ export interface PdfExportOptions {
   dpi: number;
   showPageNumbers: boolean;
   showPageBoundaries: boolean;
+  showGlueMarks: boolean;
   filename?: string;
 }
 
@@ -63,6 +64,18 @@ export function exportPosterPdf(options: PdfExportOptions) {
         slice.destWidthMm,
         slice.destHeightMm,
       );
+    }
+
+    if (options.showGlueMarks) {
+      getGlueMarks(options.plan)
+        .filter((mark) => mark.row === slice.row && mark.column === slice.column)
+        .forEach((mark) => {
+          pdf.setFillColor(218, 239, 226);
+          pdf.setDrawColor(26, 96, 65);
+          pdf.rect(mark.xMm, mark.yMm, mark.widthMm, mark.heightMm, 'F');
+          pdf.setLineWidth(0.25);
+          pdf.rect(mark.xMm, mark.yMm, mark.widthMm, mark.heightMm);
+        });
     }
 
     if (options.showPageNumbers) {

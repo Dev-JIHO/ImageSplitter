@@ -1,14 +1,22 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
+﻿import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
+import type { Dispatch, RefObject, SetStateAction } from 'react';
 import {
   createManualGridPlan,
   recommendTargetGrid,
   type GridPlan,
   type Orientation,
 } from './lib/geometry';
+import { createExportFilename } from './lib/exportFilename';
 import { loadImageFile, type LoadedImage } from './lib/imageLoader';
 import { exportPosterPdf } from './lib/pdfExport';
 import {
+  calculatePreviewToolbarPosition,
+  type ToolbarPosition,
+} from './lib/previewToolbar';
+import {
   createPosterLayout,
+  getGlueMarks,
+  getPagePrinterFrame,
   getPhysicalPrintableFrame,
   type CropFocus,
   type FitMode,
@@ -31,14 +39,15 @@ interface Settings {
   columns: number;
   targetWidthMm: number;
   targetHeightMm: number;
-  marginMm: number;
   overlapMm: number;
+  printerMarginMm: number;
   exportDpi: number;
   rotationDeg: number;
   imageScale: number;
   cropFocus: CropFocus;
   showPageNumbers: boolean;
   showPageBoundaries: boolean;
+  showGlueMarks: boolean;
 }
 
 const initialSettings: Settings = {
@@ -50,15 +59,19 @@ const initialSettings: Settings = {
   columns: 2,
   targetWidthMm: 420,
   targetHeightMm: 594,
-  marginMm: 10,
   overlapMm: 10,
+  printerMarginMm: 0,
   exportDpi: 200,
   rotationDeg: 0,
   imageScale: 1,
   cropFocus: { x: 0.5, y: 0.5 },
   showPageNumbers: true,
   showPageBoundaries: true,
+  showGlueMarks: true,
 };
+
+const supportedImageAccept = 'image/jpeg,image/png,image/webp,image/gif,image/avif';
+const supportedImageText = 'JPG, PNG, WebP, GIF, AVIF 지원';
 
 export default function App() {
   const [settings, setSettings] = useState<Settings>(initialSettings);
@@ -66,7 +79,14 @@ export default function App() {
   const [imageError, setImageError] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [toolbarPosition, setToolbarPosition] = useState<ToolbarPosition>({
+    top: 12,
+    right: 12,
+  });
+  const previewPanelRef = useRef<HTMLElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const toolbarRef = useRef<HTMLDivElement | null>(null);
 
   const preparedImage = useMemo(() => {
     if (!loadedImage) return null;
@@ -93,15 +113,15 @@ export default function App() {
         ? recommendTargetGrid({
             targetWidthMm: targetSize.widthMm,
             targetHeightMm: targetSize.heightMm,
-            marginMm: settings.marginMm,
             overlapMm: settings.overlapMm,
+            printerMarginMm: settings.printerMarginMm,
           })
         : createManualGridPlan({
             orientation: settings.orientation,
             rows: settings.rows,
             columns: settings.columns,
-            marginMm: settings.marginMm,
             overlapMm: settings.overlapMm,
+            printerMarginMm: settings.printerMarginMm,
           });
       const layout = createPosterLayout(plan, {
         image: preparedImage.size,
@@ -118,7 +138,7 @@ export default function App() {
         plan: null,
         layout: null,
         targetSize: null,
-        error: error instanceof Error ? error.message : '설정을 확인해주세요.',
+        error: error instanceof Error ? error.message : '?ㅼ젙???뺤씤?댁＜?몄슂.',
       };
     }
   }, [preparedImage, settings]);
@@ -133,6 +153,29 @@ export default function App() {
       settings,
     );
   }, [preparedImage, layoutState.plan, layoutState.layout, settings]);
+
+  useEffect(() => {
+    if (!loadedImage || !layoutState.plan || !layoutState.layout) return;
+
+    const updateToolbarPosition = () => {
+      const panel = previewPanelRef.current;
+      const canvas = canvasRef.current;
+      const toolbar = toolbarRef.current;
+      if (!panel || !canvas || !toolbar) return;
+
+      setToolbarPosition(
+        calculatePreviewToolbarPosition(
+          panel.getBoundingClientRect(),
+          canvas.getBoundingClientRect(),
+          toolbar.getBoundingClientRect(),
+        ),
+      );
+    };
+
+    updateToolbarPosition();
+    window.addEventListener('resize', updateToolbarPosition);
+    return () => window.removeEventListener('resize', updateToolbarPosition);
+  }, [loadedImage, layoutState.plan, layoutState.layout, settings]);
 
   async function handleFileChange(file: File | undefined) {
     setImageError('');
@@ -151,7 +194,7 @@ export default function App() {
         cropFocus: { x: 0.5, y: 0.5 },
       }));
     } catch (error) {
-      setImageError(error instanceof Error ? error.message : '이미지 업로드 실패');
+      setImageError(error instanceof Error ? error.message : '?대?吏 ?낅줈???ㅽ뙣');
     }
   }
 
@@ -179,7 +222,15 @@ export default function App() {
         dpi: settings.exportDpi,
         showPageNumbers: settings.showPageNumbers,
         showPageBoundaries: settings.showPageBoundaries,
-        filename: `${stripExtension(loadedImage.name)}-a4-split.pdf`,
+        showGlueMarks: settings.showGlueMarks,
+        filename: createExportFilename({
+          originalName: loadedImage.name,
+          rows: layoutState.plan.rows,
+          columns: layoutState.plan.columns,
+          pageCount: layoutState.plan.pageCount,
+          targetWidthMm: layoutState.targetSize?.widthMm,
+          targetHeightMm: layoutState.targetSize?.heightMm,
+        }),
       });
       setIsConfirmOpen(false);
     } finally {
@@ -209,18 +260,42 @@ export default function App() {
       <section className="control-panel" aria-label="분할 설정">
         <div className="title-block">
           <h1>A4 이미지 분할</h1>
-          <p>큰 이미지를 여러 장의 A4로 나누어 인쇄할 PDF를 만듭니다.</p>
+          <p>큰 이미지를 여러 장의 A4로 나누어 인쇄용 PDF를 만듭니다.</p>
         </div>
 
         <div className="step-heading">
           <span>1</span>
           <strong>이미지 선택</strong>
         </div>
-        <label className="field">
-          <span>나눌 이미지</span>
+        <label
+          className={`upload-drop-zone ${isDraggingFile ? 'is-dragging' : ''}`}
+          onDragEnter={(event) => {
+            event.preventDefault();
+            setIsDraggingFile(true);
+          }}
+          onDragOver={(event) => {
+            event.preventDefault();
+          }}
+          onDragLeave={(event) => {
+            event.preventDefault();
+            if (event.currentTarget === event.target) {
+              setIsDraggingFile(false);
+            }
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            setIsDraggingFile(false);
+            handleFileChange(event.dataTransfer.files[0]);
+          }}
+        >
+          <strong>
+            {loadedImage ? loadedImage.name : '이미지를 끌어오거나 클릭해서 선택'}
+          </strong>
+          <span>여러 장의 A4로 나눌 사진 파일을 넣어주세요.</span>
+          <small>{supportedImageText}</small>
           <input
             type="file"
-            accept="image/*"
+            accept={supportedImageAccept}
             onChange={(event) => handleFileChange(event.target.files?.[0])}
           />
         </label>
@@ -275,73 +350,9 @@ export default function App() {
         <p className="hint-text">
           빈칸 없이 채우기는 일부가 잘릴 수 있고, 이미지 안 자르기는 빈칸이 생길 수 있습니다.
         </p>
-        <div className="image-adjust-panel">
-          <div className="button-row">
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() =>
-                setSettings((current) => ({
-                  ...current,
-                  rotationDeg: normalizeRotation(current.rotationDeg - 90),
-                  cropFocus: { x: 0.5, y: 0.5 },
-                }))
-              }
-            >
-              왼쪽 90도
-            </button>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() =>
-                setSettings((current) => ({
-                  ...current,
-                  rotationDeg: normalizeRotation(current.rotationDeg + 90),
-                  cropFocus: { x: 0.5, y: 0.5 },
-                }))
-              }
-            >
-              오른쪽 90도
-            </button>
-          </div>
-          <div className="range-field">
-            <label htmlFor="image-scale">이미지 확대율</label>
-            <div>
-              <input
-                id="image-scale"
-                type="range"
-                min={1}
-                max={2}
-                step={0.01}
-                value={settings.imageScale}
-                disabled={settings.fitMode !== 'cover'}
-                onChange={(event) =>
-                  updateSetting('imageScale', Number(event.target.value))
-                }
-              />
-              <span>{Math.round(settings.imageScale * 100)}%</span>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="secondary-button"
-            disabled={settings.fitMode !== 'cover'}
-            onClick={() =>
-              setSettings((current) => ({
-                ...current,
-                imageScale: 1,
-                cropFocus: { x: 0.5, y: 0.5 },
-              }))
-            }
-          >
-            위치와 크기 초기화
-          </button>
-          {layoutState.layout?.fitMode === 'cover' ? (
-            <p className="hint-text">
-              미리보기의 이미지를 누르거나 드래그해서 인쇄될 영역을 옮길 수 있습니다.
-            </p>
-          ) : null}
-        </div>
+        <p className="hint-text">
+          회전, 확대, 위치 조정은 오른쪽 미리보기 위의 작은 도구에서 할 수 있습니다.
+        </p>
 
         {settings.mode === 'manual' ? (
           <>
@@ -438,14 +449,7 @@ export default function App() {
 
         <div className="field-grid">
           <NumberField
-            label="바깥 여백(mm)"
-            value={settings.marginMm}
-            min={0}
-            step={1}
-            onChange={(value) => updateSetting('marginMm', value)}
-          />
-          <NumberField
-            label="겹쳐 붙일 폭(mm)"
+            label="겹침 여백(mm)"
             value={settings.overlapMm}
             min={0}
             step={1}
@@ -453,7 +457,31 @@ export default function App() {
           />
         </div>
         <p className="hint-text">
-          프린터가 가장자리를 잘라내면 바깥 여백을 15mm 이상으로 늘리세요.
+          한쪽 겹침 영역을 남겨 풀칠하고, 다른 쪽은 잘라내 이어붙일 수 있습니다.
+        </p>
+
+        <fieldset className="segmented segmented-three">
+          <legend>프린터 여백 보정</legend>
+          {[0, 3, 5].map((margin) => (
+            <button
+              key={margin}
+              type="button"
+              className={settings.printerMarginMm === margin ? 'active' : ''}
+              onClick={() => updateSetting('printerMarginMm', margin)}
+            >
+              {margin === 0 ? '없음' : `${margin}mm`}
+            </button>
+          ))}
+        </fieldset>
+        <NumberField
+          label="직접 입력(mm)"
+          value={settings.printerMarginMm}
+          min={0}
+          step={1}
+          onChange={(value) => updateSetting('printerMarginMm', value)}
+        />
+        <p className="hint-text">
+          일반 프린터는 3~5mm를 권장합니다. 켜면 같은 크기에 더 많은 A4가 필요할 수 있습니다.
         </p>
 
         <fieldset className="segmented segmented-three">
@@ -493,6 +521,14 @@ export default function App() {
           />
           <span>페이지 경계선 표시</span>
         </label>
+        <label className="check-field">
+          <input
+            type="checkbox"
+            checked={settings.showGlueMarks}
+            onChange={(event) => updateSetting('showGlueMarks', event.target.checked)}
+          />
+          <span>풀칠 영역 표시</span>
+        </label>
 
         <p className="print-note">
           인쇄 창에서 반드시 실제 크기 또는 100%를 선택하고, 용지에 맞춤은 꺼주세요.
@@ -515,29 +551,42 @@ export default function App() {
         </button>
       </section>
 
-      <section className="preview-panel" aria-label="분할 미리보기">
+      <section
+        ref={previewPanelRef}
+        className="preview-panel"
+        aria-label="분할 미리보기"
+      >
         <PreviewLegend />
         {loadedImage && layoutState.plan && layoutState.layout ? (
-          <canvas
-            ref={canvasRef}
-            className={`preview-canvas ${
-              layoutState.layout.fitMode === 'cover' ? 'is-draggable' : ''
-            }`}
-            onPointerDown={(event) => {
-              event.currentTarget.setPointerCapture(event.pointerId);
-              updateCropFocusFromPointer(event);
-            }}
-            onPointerMove={(event) => {
-              if (event.buttons === 1) updateCropFocusFromPointer(event);
-            }}
-            onPointerUp={(event) => {
-              event.currentTarget.releasePointerCapture(event.pointerId);
-            }}
-          />
+          <>
+            <PreviewToolbar
+              settings={settings}
+              updateSetting={updateSetting}
+              setSettings={setSettings}
+              position={toolbarPosition}
+              toolbarRef={toolbarRef}
+            />
+            <canvas
+              ref={canvasRef}
+              className={`preview-canvas ${
+                layoutState.layout.fitMode === 'cover' ? 'is-draggable' : ''
+              }`}
+              onPointerDown={(event) => {
+                event.currentTarget.setPointerCapture(event.pointerId);
+                updateCropFocusFromPointer(event);
+              }}
+              onPointerMove={(event) => {
+                if (event.buttons === 1) updateCropFocusFromPointer(event);
+              }}
+              onPointerUp={(event) => {
+                event.currentTarget.releasePointerCapture(event.pointerId);
+              }}
+            />
+          </>
         ) : (
           <div className="empty-preview">
-            <strong>이미지를 업로드하면 미리보기가 표시됩니다.</strong>
-            <span>A4 경계, 페이지 번호, 여백 적용 결과를 확인할 수 있습니다.</span>
+            <strong>?대?吏瑜??낅줈?쒗븯硫?誘몃━蹂닿린媛 ?쒖떆?⑸땲??</strong>
+            <span>A4 寃쎄퀎, ?섏씠吏 踰덊샇, ?щ갚 ?곸슜 寃곌낵瑜??뺤씤?????덉뒿?덈떎.</span>
           </div>
         )}
       </section>
@@ -557,17 +606,107 @@ export default function App() {
 
 function PreviewLegend() {
   return (
-    <div className="preview-legend" aria-label="미리보기 표시 설명">
+    <div className="preview-legend" aria-label="誘몃━蹂닿린 ?쒖떆 ?ㅻ챸">
       <span>
-        <i className="legend-swatch red" /> 바깥 여백
+        <i className="legend-swatch red" /> 諛붽묑 ?щ갚
       </span>
       <span>
-        <i className="legend-swatch blue" /> A4 경계
+        <i className="legend-swatch blue" /> A4 寃쎄퀎
       </span>
       <span>
-        <i className="legend-swatch yellow" /> 겹쳐 붙일 영역
+        <i className="legend-swatch yellow" /> 寃뱀퀜 遺숈씪 ?곸뿭
       </span>
-      <span>1-1, 1-2: 붙이는 순서</span>
+      <span>
+        <i className="legend-swatch purple" /> ?꾨┛???щ갚
+      </span>
+      <span>
+        <i className="legend-swatch green" /> 풀칠 영역
+      </span>
+      <span>1-1, 1-2: 遺숈씠???쒖꽌</span>
+    </div>
+  );
+}
+
+function PreviewToolbar({
+  settings,
+  updateSetting,
+  setSettings,
+  position,
+  toolbarRef,
+}: {
+  settings: Settings;
+  updateSetting: <Key extends keyof Settings>(
+    key: Key,
+    value: Settings[Key],
+  ) => void;
+  setSettings: Dispatch<SetStateAction<Settings>>;
+  position: ToolbarPosition;
+  toolbarRef: RefObject<HTMLDivElement | null>;
+}) {
+  return (
+    <div
+      ref={toolbarRef}
+      className="preview-toolbar"
+      style={{ top: position.top, right: position.right }}
+      aria-label="?대?吏 誘몃━蹂닿린 議곗젙"
+    >
+      <button
+        type="button"
+        className="toolbar-button"
+        onClick={() =>
+          setSettings((current) => ({
+            ...current,
+            rotationDeg: normalizeRotation(current.rotationDeg - 90),
+            cropFocus: { x: 0.5, y: 0.5 },
+          }))
+        }
+      >
+        ?쇱そ 90??      </button>
+      <button
+        type="button"
+        className="toolbar-button"
+        onClick={() =>
+          setSettings((current) => ({
+            ...current,
+            rotationDeg: normalizeRotation(current.rotationDeg + 90),
+            cropFocus: { x: 0.5, y: 0.5 },
+          }))
+        }
+      >
+        ?ㅻⅨ履?90??      </button>
+      <label className="toolbar-range">
+        <span>?뺣?</span>
+        <input
+          type="range"
+          min={1}
+          max={2}
+          step={0.01}
+          value={settings.imageScale}
+          disabled={settings.fitMode !== 'cover'}
+          onChange={(event) =>
+            updateSetting('imageScale', Number(event.target.value))
+          }
+        />
+        <strong>{Math.round(settings.imageScale * 100)}%</strong>
+      </label>
+      <button
+        type="button"
+        className="toolbar-button"
+        disabled={settings.fitMode !== 'cover'}
+        onClick={() => updateSetting('cropFocus', { x: 0.5, y: 0.5 })}
+      >
+        媛?대뜲 留욎땄
+      </button>
+      <button
+        type="button"
+        className="toolbar-button"
+        disabled={settings.fitMode !== 'cover'}
+        onClick={() => updateSetting('imageScale', 1)}
+      >
+        ?뺣? 珥덇린??      </button>
+      {settings.fitMode === 'cover' ? (
+        <span className="toolbar-hint">?ъ쭊???쒕옒洹명빐???꾩튂 議곗젙</span>
+      ) : null}
     </div>
   );
 }
@@ -606,25 +745,31 @@ function ExportConfirmModal({
           </div>
           <div>
             <dt>이미지 크기</dt>
-            <dd>
-              {round(layout.imageFrameMm.width)} x {round(layout.imageFrameMm.height)}mm
-            </dd>
+            <dd>{round(layout.imageFrameMm.width)} x {round(layout.imageFrameMm.height)}mm</dd>
           </div>
           <div>
             <dt>페이지 번호</dt>
             <dd>{settings.showPageNumbers ? '표시' : '숨김'}</dd>
           </div>
           <div>
+            <dt>풀칠 영역</dt>
+            <dd>{settings.showGlueMarks ? '표시' : '숨김'}</dd>
+          </div>
+          <div>
             <dt>회전</dt>
             <dd>{settings.rotationDeg}도</dd>
           </div>
           <div>
-            <dt>확대율</dt>
+            <dt>확대</dt>
             <dd>{Math.round(settings.imageScale * 100)}%</dd>
           </div>
           <div>
             <dt>출력 해상도</dt>
             <dd>{settings.exportDpi} DPI</dd>
+          </div>
+          <div>
+            <dt>프린터 여백 보정</dt>
+            <dd>{settings.printerMarginMm > 0 ? `${settings.printerMarginMm}mm` : '없음'}</dd>
           </div>
         </dl>
         <p className="modal-warning">
@@ -676,19 +821,46 @@ function NumberField(props: {
     setDraft(String(Math.max(props.min, Number(draft))));
   }
 
+  function stepDraft(direction: 1 | -1) {
+    const base = draft === '' || !Number.isFinite(Number(draft)) ? props.value : Number(draft);
+    const nextValue = Math.max(props.min, roundNumber(base + props.step * direction));
+    setDraft(String(nextValue));
+    props.onChange(nextValue);
+  }
+
   return (
     <label className="field">
       <span>{props.label}</span>
-      <input
-        type="text"
-        inputMode="decimal"
-        min={props.min}
-        step={props.step}
-        value={draft}
-        disabled={props.disabled}
-        onChange={(event) => commitDraft(event.target.value)}
-        onBlur={handleBlur}
-      />
+      <div className="number-input-control">
+        <input
+          type="text"
+          inputMode="decimal"
+          min={props.min}
+          step={props.step}
+          value={draft}
+          disabled={props.disabled}
+          onChange={(event) => commitDraft(event.target.value)}
+          onBlur={handleBlur}
+        />
+        <div className="number-stepper" aria-hidden={props.disabled}>
+          <button
+            type="button"
+            tabIndex={-1}
+            disabled={props.disabled}
+            aria-label={`${props.label} 利앷?`}
+            onClick={() => stepDraft(1)}
+          >
+            ??          </button>
+          <button
+            type="button"
+            tabIndex={-1}
+            disabled={props.disabled}
+            aria-label={`${props.label} 媛먯냼`}
+            onClick={() => stepDraft(-1)}
+          >
+            ??          </button>
+        </div>
+      </div>
     </label>
   );
 }
@@ -716,10 +888,7 @@ function Summary({
     <dl className="summary">
       <div>
         <dt>추천/설정</dt>
-        <dd>
-          {plan.orientation === 'portrait' ? 'A4 세로' : 'A4 가로'} · {plan.rows}행 x{' '}
-          {plan.columns}열
-        </dd>
+        <dd>{plan.orientation === 'portrait' ? 'A4 세로' : 'A4 가로'} · {plan.rows}행 x {plan.columns}열</dd>
       </div>
       <div>
         <dt>PDF</dt>
@@ -727,22 +896,16 @@ function Summary({
       </div>
       <div>
         <dt>팔레트</dt>
-        <dd>
-          {round(plan.totalWidthMm)} x {round(plan.totalHeightMm)}mm
-        </dd>
+        <dd>{round(plan.totalWidthMm)} x {round(plan.totalHeightMm)}mm</dd>
       </div>
       <div>
         <dt>이미지 배치</dt>
-        <dd>
-          {round(layout.imageFrameMm.width)} x {round(layout.imageFrameMm.height)}mm
-        </dd>
+        <dd>{round(layout.imageFrameMm.width)} x {round(layout.imageFrameMm.height)}mm</dd>
       </div>
       {targetSize ? (
         <div>
           <dt>요청 크기</dt>
-          <dd>
-            {round(targetSize.widthMm)} x {round(targetSize.heightMm)}mm
-          </dd>
+          <dd>{round(targetSize.widthMm)} x {round(targetSize.heightMm)}mm</dd>
         </div>
       ) : null}
     </dl>
@@ -788,6 +951,39 @@ function renderPreview(
     printableFrame.height,
   );
 
+  if (settings.printerMarginMm > 0) {
+    context.fillStyle = 'rgba(126, 87, 194, 0.13)';
+    for (let row = 0; row < plan.rows; row += 1) {
+      for (let column = 0; column < plan.columns; column += 1) {
+        const pageX = column * plan.page.widthMm;
+        const pageY = row * plan.page.heightMm;
+        const printerFrame = getPagePrinterFrame(plan, row, column);
+        context.fillRect(pageX, pageY, plan.page.widthMm, settings.printerMarginMm);
+        context.fillRect(
+          pageX,
+          pageY + plan.page.heightMm - settings.printerMarginMm,
+          plan.page.widthMm,
+          settings.printerMarginMm,
+        );
+        context.fillRect(pageX, pageY, settings.printerMarginMm, plan.page.heightMm);
+        context.fillRect(
+          pageX + plan.page.widthMm - settings.printerMarginMm,
+          pageY,
+          settings.printerMarginMm,
+          plan.page.heightMm,
+        );
+        context.strokeStyle = 'rgba(126, 87, 194, 0.7)';
+        context.lineWidth = Math.max(1 / scale, 0.6);
+        context.strokeRect(
+          printerFrame.x,
+          printerFrame.y,
+          printerFrame.width,
+          printerFrame.height,
+        );
+      }
+    }
+  }
+
   context.drawImage(
     image,
     layout.sourceX,
@@ -809,6 +1005,16 @@ function renderPreview(
         slice.previewWidthMm,
         slice.previewHeightMm,
       );
+    });
+  }
+
+  if (settings.showGlueMarks && settings.overlapMm > 0) {
+    context.fillStyle = 'rgba(47, 125, 84, 0.18)';
+    context.strokeStyle = 'rgba(26, 96, 65, 0.8)';
+    context.lineWidth = Math.max(1 / scale, 0.8);
+    getGlueMarks(plan).forEach((mark) => {
+      context.fillRect(mark.previewXmm, mark.previewYmm, mark.widthMm, mark.heightMm);
+      context.strokeRect(mark.previewXmm, mark.previewYmm, mark.widthMm, mark.heightMm);
     });
   }
 
@@ -882,6 +1088,10 @@ function round(value: number) {
   return Math.round(value * 10) / 10;
 }
 
+function roundNumber(value: number) {
+  return Math.round(value * 1000) / 1000;
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -919,7 +1129,7 @@ function createRotatedImageSource(image: HTMLImageElement, rotationDeg: number) 
 
   const context = canvas.getContext('2d');
   if (!context) {
-    throw new Error('이미지를 회전할 수 없습니다.');
+    throw new Error('?대?吏瑜??뚯쟾?????놁뒿?덈떎.');
   }
 
   context.translate(canvas.width / 2, canvas.height / 2);
@@ -930,8 +1140,4 @@ function createRotatedImageSource(image: HTMLImageElement, rotationDeg: number) 
     source: canvas as CanvasImageSource,
     size: { widthPx: canvas.width, heightPx: canvas.height },
   };
-}
-
-function stripExtension(name: string) {
-  return name.replace(/\.[^.]+$/, '') || 'image';
 }

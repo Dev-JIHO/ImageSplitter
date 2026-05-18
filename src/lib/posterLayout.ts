@@ -40,6 +40,17 @@ export interface PageSlice {
   labelYmm: number;
 }
 
+export interface GlueMark {
+  row: number;
+  column: number;
+  xMm: number;
+  yMm: number;
+  widthMm: number;
+  heightMm: number;
+  previewXmm: number;
+  previewYmm: number;
+}
+
 export interface PosterLayout {
   fitMode: FitMode;
   sourceX: number;
@@ -69,8 +80,8 @@ export function createPosterLayout(
   }
 
   const contentFrame: RectMm = {
-    x: plan.marginMm,
-    y: plan.marginMm,
+    x: plan.printerMarginMm,
+    y: plan.printerMarginMm,
     width: plan.contentWidthMm,
     height: plan.contentHeightMm,
   };
@@ -99,10 +110,23 @@ export function createPosterLayout(
 
 export function getPhysicalPrintableFrame(plan: GridPlan): RectMm {
   return {
-    x: plan.marginMm,
-    y: plan.marginMm,
-    width: plan.totalWidthMm - plan.marginMm * 2,
-    height: plan.totalHeightMm - plan.marginMm * 2,
+    x: 0,
+    y: 0,
+    width: plan.totalWidthMm,
+    height: plan.totalHeightMm,
+  };
+}
+
+export function getPagePrinterFrame(
+  plan: GridPlan,
+  row: number,
+  column: number,
+): RectMm {
+  return {
+    x: column * plan.page.widthMm + plan.printerMarginMm,
+    y: row * plan.page.heightMm + plan.printerMarginMm,
+    width: plan.page.widthMm - plan.printerMarginMm * 2,
+    height: plan.page.heightMm - plan.printerMarginMm * 2,
   };
 }
 
@@ -212,17 +236,68 @@ function createOutputFrame(
     return contentFrame;
   }
 
+  if (plan.printerMarginMm > 0) {
+    const width = Math.min(requestedFrame.width, contentFrame.width);
+    const height = Math.min(requestedFrame.height, contentFrame.height);
+    return {
+      x: contentFrame.x + (contentFrame.width - width) / 2,
+      y: contentFrame.y + (contentFrame.height - height) / 2,
+      width,
+      height,
+    };
+  }
+
   const physicalPrintableFrame = getPhysicalPrintableFrame(plan);
   const physicalPrintableWidth = physicalPrintableFrame.width;
   const physicalPrintableHeight = physicalPrintableFrame.height;
   const width = Math.min(requestedFrame.width, physicalPrintableWidth);
   const height = Math.min(requestedFrame.height, physicalPrintableHeight);
   return {
-    x: plan.marginMm + (physicalPrintableWidth - width) / 2,
-    y: plan.marginMm + (physicalPrintableHeight - height) / 2,
+    x: (physicalPrintableWidth - width) / 2,
+    y: (physicalPrintableHeight - height) / 2,
     width,
     height,
   };
+}
+
+export function getGlueMarks(plan: GridPlan): GlueMark[] {
+  if (plan.overlapMm <= 0) return [];
+
+  const marks: GlueMark[] = [];
+  for (let row = 0; row < plan.rows; row += 1) {
+    for (let column = 0; column < plan.columns; column += 1) {
+      const pageX = column * plan.page.widthMm;
+      const pageY = row * plan.page.heightMm;
+
+      if (column < plan.columns - 1) {
+        marks.push({
+          row,
+          column,
+          xMm: plan.page.widthMm - plan.overlapMm,
+          yMm: 0,
+          widthMm: plan.overlapMm,
+          heightMm: plan.page.heightMm,
+          previewXmm: pageX + plan.page.widthMm - plan.overlapMm,
+          previewYmm: pageY,
+        });
+      }
+
+      if (row < plan.rows - 1) {
+        marks.push({
+          row,
+          column,
+          xMm: 0,
+          yMm: plan.page.heightMm - plan.overlapMm,
+          widthMm: plan.page.widthMm,
+          heightMm: plan.overlapMm,
+          previewXmm: pageX,
+          previewYmm: pageY + plan.page.heightMm - plan.overlapMm,
+        });
+      }
+    }
+  }
+
+  return marks;
 }
 
 function createPageSlices(
@@ -248,7 +323,13 @@ function createPageSlices(
           (row > 0 ? plan.overlapMm : 0) +
           (row < plan.rows - 1 ? plan.overlapMm : 0),
       };
-      const visible = intersectRects(expandedPage, imageFrameMm);
+      const printerFrame = getPagePrinterFrame(plan, row, column);
+      const availablePage =
+        plan.printerMarginMm > 0
+          ? intersectRects(expandedPage, printerFrame)
+          : expandedPage;
+      if (!availablePage) continue;
+      const visible = intersectRects(availablePage, imageFrameMm);
       if (!visible) continue;
 
       const source = mapFrameToSource(visible, imageFrameMm, sourceRect);

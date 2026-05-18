@@ -9,15 +9,17 @@ export interface ManualGridInput {
   orientation: Orientation;
   rows: number;
   columns: number;
-  marginMm: number;
+  marginMm?: number;
   overlapMm: number;
+  printerMarginMm?: number;
 }
 
 export interface TargetSizeInput {
   targetWidthMm: number;
   targetHeightMm: number;
-  marginMm: number;
+  marginMm?: number;
   overlapMm: number;
+  printerMarginMm?: number;
 }
 
 export interface GridPlan {
@@ -32,6 +34,7 @@ export interface GridPlan {
   pageCount: number;
   marginMm: number;
   overlapMm: number;
+  printerMarginMm: number;
 }
 
 const A4: Record<Orientation, PageSize> = {
@@ -45,14 +48,15 @@ export function getA4Size(orientation: Orientation): PageSize {
 
 export function createManualGridPlan(input: ManualGridInput): GridPlan {
   assertGrid(input.rows, input.columns);
-  assertNonNegative(input.marginMm, 'Margin');
+  const printerMarginMm = input.printerMarginMm ?? 0;
+  assertPrinterMargin(printerMarginMm);
   const page = getA4Size(input.orientation);
   assertOverlap(input.overlapMm, page);
 
   const totalWidthMm = page.widthMm * input.columns;
   const totalHeightMm = page.heightMm * input.rows;
-  const contentWidthMm = totalWidthMm - input.marginMm * 2;
-  const contentHeightMm = totalHeightMm - input.marginMm * 2;
+  const contentWidthMm = totalWidthMm - printerMarginMm * 2 * input.columns;
+  const contentHeightMm = totalHeightMm - printerMarginMm * 2 * input.rows;
 
   if (contentWidthMm <= 0 || contentHeightMm <= 0) {
     throw new Error('Margin is too large for the selected grid.');
@@ -68,15 +72,16 @@ export function createManualGridPlan(input: ManualGridInput): GridPlan {
     contentWidthMm,
     contentHeightMm,
     pageCount: input.rows * input.columns,
-    marginMm: input.marginMm,
+    marginMm: 0,
     overlapMm: input.overlapMm,
+    printerMarginMm,
   };
 }
 
 export function recommendTargetGrid(input: TargetSizeInput): GridPlan {
   assertPositiveNumber(input.targetWidthMm, 'Target width');
   assertPositiveNumber(input.targetHeightMm, 'Target height');
-  assertNonNegative(input.marginMm, 'Margin');
+  assertPrinterMargin(input.printerMarginMm ?? 0);
 
   const candidates = (['portrait', 'landscape'] as const).flatMap((orientation) =>
     createTargetCandidates(orientation, input),
@@ -112,10 +117,13 @@ function createTargetCandidates(
   input: TargetSizeInput,
 ): GridPlan[] {
   const page = getA4Size(orientation);
+  const printerMarginMm = input.printerMarginMm ?? 0;
   assertOverlap(input.overlapMm, page);
+  const printableWidthMm = page.widthMm - printerMarginMm * 2;
+  const printableHeightMm = page.heightMm - printerMarginMm * 2;
 
-  const maxColumns = Math.max(1, Math.ceil(input.targetWidthMm / page.widthMm) + 2);
-  const maxRows = Math.max(1, Math.ceil(input.targetHeightMm / page.heightMm) + 2);
+  const maxColumns = Math.max(1, Math.ceil(input.targetWidthMm / printableWidthMm) + 2);
+  const maxRows = Math.max(1, Math.ceil(input.targetHeightMm / printableHeightMm) + 2);
   const candidates: GridPlan[] = [];
 
   for (let rows = 1; rows <= maxRows; rows += 1) {
@@ -123,11 +131,9 @@ function createTargetCandidates(
       const totalWidthMm = page.widthMm * columns;
       const totalHeightMm = page.heightMm * rows;
       const contentWidthMm =
-        page.widthMm + (columns - 1) * (page.widthMm - input.overlapMm) -
-        input.marginMm * 2;
+        printableWidthMm + (columns - 1) * (printableWidthMm - input.overlapMm);
       const contentHeightMm =
-        page.heightMm + (rows - 1) * (page.heightMm - input.overlapMm) -
-        input.marginMm * 2;
+        printableHeightMm + (rows - 1) * (printableHeightMm - input.overlapMm);
 
       if (
         contentWidthMm >= input.targetWidthMm &&
@@ -143,8 +149,9 @@ function createTargetCandidates(
           contentWidthMm,
           contentHeightMm,
           pageCount: rows * columns,
-          marginMm: input.marginMm,
+          marginMm: 0,
           overlapMm: input.overlapMm,
+          printerMarginMm,
         });
       }
     }
@@ -163,6 +170,13 @@ function assertOverlap(overlapMm: number, page: PageSize) {
   assertNonNegative(overlapMm, 'Overlap');
   if (overlapMm >= page.widthMm || overlapMm >= page.heightMm) {
     throw new Error('Overlap must be smaller than both page dimensions.');
+  }
+}
+
+function assertPrinterMargin(printerMarginMm: number) {
+  assertNonNegative(printerMarginMm, 'Printer margin');
+  if (printerMarginMm >= A4.portrait.widthMm / 2) {
+    throw new Error('Printer margin is too large.');
   }
 }
 

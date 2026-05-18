@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'vitest';
 import { createManualGridPlan, recommendTargetGrid } from './geometry';
-import { createPosterLayout, getPhysicalPrintableFrame } from './posterLayout';
+import {
+  createPosterLayout,
+  getGlueMarks,
+  getPhysicalPrintableFrame,
+} from './posterLayout';
 
 describe('poster layout', () => {
   test('cover mode fills the content area and crops from the center', () => {
@@ -8,7 +12,6 @@ describe('poster layout', () => {
       orientation: 'portrait',
       rows: 1,
       columns: 1,
-      marginMm: 0,
       overlapMm: 0,
     });
 
@@ -34,7 +37,6 @@ describe('poster layout', () => {
       orientation: 'portrait',
       rows: 1,
       columns: 1,
-      marginMm: 0,
       overlapMm: 0,
     });
 
@@ -54,7 +56,6 @@ describe('poster layout', () => {
       orientation: 'portrait',
       rows: 1,
       columns: 1,
-      marginMm: 0,
       overlapMm: 0,
     });
 
@@ -73,7 +74,6 @@ describe('poster layout', () => {
       orientation: 'portrait',
       rows: 1,
       columns: 1,
-      marginMm: 0,
       overlapMm: 0,
     });
 
@@ -95,7 +95,6 @@ describe('poster layout', () => {
       orientation: 'portrait',
       rows: 1,
       columns: 1,
-      marginMm: 10,
       overlapMm: 0,
     });
 
@@ -108,10 +107,10 @@ describe('poster layout', () => {
     expect(layout.sourceY).toBe(0);
     expect(layout.sourceWidth).toBe(1000);
     expect(layout.sourceHeight).toBe(500);
-    expect(layout.imageFrameMm.width).toBe(190);
-    expect(layout.imageFrameMm.height).toBe(95);
-    expect(layout.imageFrameMm.x).toBe(10);
-    expect(layout.imageFrameMm.y).toBe(101);
+    expect(layout.imageFrameMm.width).toBe(210);
+    expect(layout.imageFrameMm.height).toBe(105);
+    expect(layout.imageFrameMm.x).toBe(0);
+    expect(layout.imageFrameMm.y).toBe(96);
   });
 
   test('creates one slice per grid cell with page-local PDF placement', () => {
@@ -119,7 +118,6 @@ describe('poster layout', () => {
       orientation: 'landscape',
       rows: 2,
       columns: 3,
-      marginMm: 10,
       overlapMm: 0,
     });
 
@@ -133,8 +131,8 @@ describe('poster layout', () => {
       row: 0,
       column: 0,
       pageNumber: 1,
-      destXmm: 10,
-      destYmm: 10,
+      destXmm: 0,
+      destYmm: 0,
     });
     expect(layout.slices[5]).toMatchObject({
       row: 1,
@@ -143,12 +141,11 @@ describe('poster layout', () => {
     });
   });
 
-  test('keeps outer margin visible in a single-page PDF slice', () => {
+  test('single-page PDF slice uses the full A4 page when no printer margin is set', () => {
     const plan = createManualGridPlan({
       orientation: 'portrait',
       rows: 1,
       columns: 1,
-      marginMm: 12,
       overlapMm: 0,
     });
 
@@ -158,10 +155,10 @@ describe('poster layout', () => {
     });
 
     expect(layout.slices[0]).toMatchObject({
-      destXmm: 12,
-      destYmm: 12,
-      destWidthMm: 186,
-      destHeightMm: 273,
+      destXmm: 0,
+      destYmm: 0,
+      destWidthMm: 210,
+      destHeightMm: 297,
     });
   });
 
@@ -170,7 +167,6 @@ describe('poster layout', () => {
       orientation: 'portrait',
       rows: 1,
       columns: 2,
-      marginMm: 0,
       overlapMm: 10,
     });
 
@@ -189,7 +185,6 @@ describe('poster layout', () => {
     const plan = recommendTargetGrid({
       targetWidthMm: 500,
       targetHeightMm: 300,
-      marginMm: 10,
       overlapMm: 12,
     });
 
@@ -202,15 +197,15 @@ describe('poster layout', () => {
     expect(layout.outputFrameMm.width).toBe(500);
     expect(layout.outputFrameMm.height).toBe(300);
     expect(layout.outputFrameMm.x).toBeCloseTo(
-      plan.marginMm + (plan.totalWidthMm - plan.marginMm * 2 - 500) / 2,
+      (plan.totalWidthMm - 500) / 2,
       6,
     );
     expect(layout.outputFrameMm.y).toBeCloseTo(
-      plan.marginMm + (plan.totalHeightMm - plan.marginMm * 2 - 300) / 2,
+      (plan.totalHeightMm - 300) / 2,
       6,
     );
     expect(layout.outputFrameMm.x).toBeCloseTo(
-      plan.marginMm + (plan.totalWidthMm - plan.marginMm * 2 - 500) / 2,
+      (plan.totalWidthMm - 500) / 2,
       6,
     );
   });
@@ -219,27 +214,25 @@ describe('poster layout', () => {
     const plan = recommendTargetGrid({
       targetWidthMm: 1288.5,
       targetHeightMm: 1000,
-      marginMm: 5,
       overlapMm: 10,
     });
 
     const frame = getPhysicalPrintableFrame(plan);
 
     expect(frame).toEqual({
-      x: 5,
-      y: 5,
-      width: plan.totalWidthMm - 10,
-      height: plan.totalHeightMm - 10,
+      x: 0,
+      y: 0,
+      width: plan.totalWidthMm,
+      height: plan.totalHeightMm,
     });
     expect(frame.width).toBeGreaterThan(plan.contentWidthMm);
   });
 
-  test('places page labels in page margin when margin has enough room', () => {
+  test('places page labels near the page bottom when no separate margin exists', () => {
     const plan = createManualGridPlan({
       orientation: 'portrait',
       rows: 1,
       columns: 1,
-      marginMm: 12,
       overlapMm: 0,
     });
 
@@ -249,8 +242,82 @@ describe('poster layout', () => {
     });
 
     expect(layout.slices[0].labelText).toBe('1-1');
-    expect(layout.slices[0].labelYmm).toBeGreaterThan(
-      layout.slices[0].destYmm + layout.slices[0].destHeightMm,
-    );
+    expect(layout.slices[0].labelYmm).toBe(293);
+  });
+
+  test('keeps compensated page slices inside the page printable area', () => {
+    const plan = createManualGridPlan({
+      orientation: 'portrait',
+      rows: 1,
+      columns: 1,
+      overlapMm: 0,
+      printerMarginMm: 5,
+    });
+
+    const layout = createPosterLayout(plan, {
+      image: { widthPx: 800, heightPx: 1000 },
+      fitMode: 'cover',
+    });
+
+    expect(layout.slices[0]).toMatchObject({
+      destXmm: 5,
+      destYmm: 5,
+      destWidthMm: 200,
+      destHeightMm: 287,
+    });
+  });
+
+  test('creates glue marks on right and bottom overlap tabs', () => {
+    const plan = createManualGridPlan({
+      orientation: 'portrait',
+      rows: 2,
+      columns: 2,
+      overlapMm: 10,
+    });
+
+    const marks = getGlueMarks(plan);
+
+    expect(marks).toEqual([
+      {
+        row: 0,
+        column: 0,
+        xMm: 200,
+        yMm: 0,
+        widthMm: 10,
+        heightMm: 297,
+        previewXmm: 200,
+        previewYmm: 0,
+      },
+      {
+        row: 0,
+        column: 0,
+        xMm: 0,
+        yMm: 287,
+        widthMm: 210,
+        heightMm: 10,
+        previewXmm: 0,
+        previewYmm: 287,
+      },
+      {
+        row: 0,
+        column: 1,
+        xMm: 0,
+        yMm: 287,
+        widthMm: 210,
+        heightMm: 10,
+        previewXmm: 210,
+        previewYmm: 287,
+      },
+      {
+        row: 1,
+        column: 0,
+        xMm: 200,
+        yMm: 0,
+        widthMm: 10,
+        heightMm: 297,
+        previewXmm: 200,
+        previewYmm: 297,
+      },
+    ]);
   });
 });

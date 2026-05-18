@@ -11,12 +11,11 @@ describe('geometry', () => {
     expect(getA4Size('landscape')).toEqual({ widthMm: 297, heightMm: 210 });
   });
 
-  test('creates a manual grid plan from A4 pages minus outer margin', () => {
+  test('creates a manual grid plan from full A4 pages without outer margin', () => {
     const plan = createManualGridPlan({
       orientation: 'portrait',
       rows: 2,
       columns: 3,
-      marginMm: 10,
       overlapMm: 5,
     });
 
@@ -27,10 +26,10 @@ describe('geometry', () => {
       page: { widthMm: 210, heightMm: 297 },
       totalWidthMm: 630,
       totalHeightMm: 594,
-      contentWidthMm: 610,
-      contentHeightMm: 574,
+      contentWidthMm: 630,
+      contentHeightMm: 594,
       pageCount: 6,
-      marginMm: 10,
+      marginMm: 0,
       overlapMm: 5,
     });
   });
@@ -41,7 +40,6 @@ describe('geometry', () => {
         orientation: 'portrait',
         rows: 0,
         columns: 1,
-        marginMm: 0,
         overlapMm: 0,
       }),
     ).toThrow('Rows and columns must be positive integers.');
@@ -51,17 +49,6 @@ describe('geometry', () => {
         orientation: 'portrait',
         rows: 1,
         columns: 1,
-        marginMm: 120,
-        overlapMm: 0,
-      }),
-    ).toThrow('Margin is too large for the selected grid.');
-
-    expect(() =>
-      createManualGridPlan({
-        orientation: 'portrait',
-        rows: 1,
-        columns: 1,
-        marginMm: 0,
         overlapMm: 210,
       }),
     ).toThrow('Overlap must be smaller than both page dimensions.');
@@ -71,7 +58,6 @@ describe('geometry', () => {
     const plan = recommendTargetGrid({
       targetWidthMm: 500,
       targetHeightMm: 400,
-      marginMm: 0,
       overlapMm: 10,
     });
 
@@ -85,11 +71,29 @@ describe('geometry', () => {
     expect(plan.contentHeightMm).toBeGreaterThanOrEqual(400);
   });
 
+  test('uses printer margin compensation when recommending target grids', () => {
+    const uncompensated = recommendTargetGrid({
+      targetWidthMm: 202,
+      targetHeightMm: 280,
+      overlapMm: 0,
+      printerMarginMm: 0,
+    });
+    const compensated = recommendTargetGrid({
+      targetWidthMm: 202,
+      targetHeightMm: 280,
+      overlapMm: 0,
+      printerMarginMm: 5,
+    });
+
+    expect(uncompensated.pageCount).toBe(1);
+    expect(compensated.pageCount).toBeGreaterThan(1);
+    expect(compensated.printerMarginMm).toBe(5);
+  });
+
   test('uses aspect ratio as a tie breaker after page count and unused area', () => {
     const plan = recommendTargetGrid({
       targetWidthMm: 290,
       targetHeightMm: 250,
-      marginMm: 0,
       overlapMm: 0,
     });
 
