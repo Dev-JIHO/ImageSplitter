@@ -41,6 +41,7 @@ import {
 } from './lib/targetSize';
 
 type SizingMode = 'manual' | 'target';
+type MobilePanel = 'image' | 'size' | 'print' | 'preview';
 
 interface Settings {
   mode: SizingMode;
@@ -93,6 +94,7 @@ export default function App() {
   const [isExporting, setIsExporting] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [activeMobilePanel, setActiveMobilePanel] = useState<MobilePanel>('image');
   const [toolbarPosition, setToolbarPosition] = useState<ToolbarPosition>({
     top: 12,
     right: 12,
@@ -307,104 +309,83 @@ export default function App() {
 
   return (
     <main className="app-shell" aria-label="A4 이미지 분할 PDF 생성기">
-      <section className="control-panel" aria-label="분할 설정">
-        <div className="title-block">
-          <h1>A4 이미지 분할</h1>
-          <p>큰 이미지를 여러 장의 A4로 나누어 인쇄용 PDF를 만듭니다.</p>
-        </div>
+      <section
+        className="control-panel"
+        data-mobile-active={activeMobilePanel !== 'preview'}
+        aria-label="분할 설정"
+      >
+        <div className="mobile-section" data-mobile-active={activeMobilePanel === 'image'}>
+          <div className="title-block">
+            <h1>A4 이미지 분할</h1>
+            <p>큰 이미지를 여러 장의 A4로 나누어 인쇄용 PDF를 만듭니다.</p>
+          </div>
 
-        <div className="step-heading">
-          <span>1</span>
-          <strong>이미지 선택</strong>
-        </div>
-        <label
-          className={`upload-drop-zone ${isDraggingFile ? 'is-dragging' : ''}`}
-          onDragEnter={(event) => {
-            event.preventDefault();
-            setIsDraggingFile(true);
-          }}
-          onDragOver={(event) => {
-            event.preventDefault();
-          }}
-          onDragLeave={(event) => {
-            event.preventDefault();
-            if (event.currentTarget === event.target) {
+          <div className="step-heading">
+            <span>1</span>
+            <strong>이미지 선택</strong>
+          </div>
+          <label
+            className={`upload-drop-zone ${isDraggingFile ? 'is-dragging' : ''}`}
+            onDragEnter={(event) => {
+              event.preventDefault();
+              setIsDraggingFile(true);
+            }}
+            onDragOver={(event) => {
+              event.preventDefault();
+            }}
+            onDragLeave={(event) => {
+              event.preventDefault();
+              if (event.currentTarget === event.target) {
+                setIsDraggingFile(false);
+              }
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
               setIsDraggingFile(false);
-            }
-          }}
-          onDrop={(event) => {
-            event.preventDefault();
-            setIsDraggingFile(false);
-            handleFileChange(event.dataTransfer.files[0]);
-          }}
-        >
-          <strong>
-            {loadedImage ? loadedImage.name : '이미지를 끌어오거나 클릭해서 선택'}
-          </strong>
-          <span>여러 장의 A4로 나눌 사진 파일을 넣어주세요.</span>
-          <small>{supportedImageText}</small>
-          <input
-            type="file"
-            accept={supportedImageAccept}
-            onChange={(event) => handleFileChange(event.target.files?.[0])}
-          />
-        </label>
-        {imageError ? <p className="error-text">{imageError}</p> : null}
-
-        <div className="step-heading">
-          <span>2</span>
-          <strong>크기 정하기</strong>
+              handleFileChange(event.dataTransfer.files[0]);
+            }}
+          >
+            <strong>
+              {loadedImage ? loadedImage.name : '이미지를 끌어오거나 클릭해서 선택'}
+            </strong>
+            <span>여러 장의 A4로 나눌 사진 파일을 넣어주세요.</span>
+            <small>{supportedImageText}</small>
+            <input
+              type="file"
+              accept={supportedImageAccept}
+              onChange={(event) => handleFileChange(event.target.files?.[0])}
+            />
+          </label>
+          {imageError ? <p className="error-text">{imageError}</p> : null}
         </div>
-        <fieldset className="segmented">
-          <legend>어떻게 크게 만들까요?</legend>
-          <button
-            type="button"
-            className={settings.mode === 'manual' ? 'active' : ''}
-            onClick={() => updateSetting('mode', 'manual')}
-          >
-            A4 장수로 만들기
-          </button>
-          <button
-            type="button"
-            className={settings.mode === 'target' ? 'active' : ''}
-            onClick={() => updateSetting('mode', 'target')}
-          >
-            완성 크기로 만들기
-          </button>
-        </fieldset>
-        <p className="hint-text">
-          장수를 알면 왼쪽, 원하는 포스터 크기를 알면 오른쪽을 고르세요.
-        </p>
 
-        <div className="step-heading">
-          <span>3</span>
-          <strong>인쇄 설정</strong>
-        </div>
-        <fieldset className="segmented">
-          <legend>이미지 배치</legend>
-          <button
-            type="button"
-            className={settings.fitMode === 'cover' ? 'active' : ''}
-            onClick={() => updateSetting('fitMode', 'cover')}
-          >
-            빈칸 없이 채우기
-          </button>
-          <button
-            type="button"
-            className={settings.fitMode === 'fit' ? 'active' : ''}
-            onClick={() => updateSetting('fitMode', 'fit')}
-          >
-            이미지 안 자르기
-          </button>
-        </fieldset>
-        <p className="hint-text">
-          빈칸 없이 채우기는 일부가 잘릴 수 있고, 이미지 안 자르기는 빈칸이 생길 수 있습니다.
-        </p>
-        <p className="hint-text">
-          회전, 확대, 위치 조정은 오른쪽 미리보기 위의 작은 도구에서 할 수 있습니다.
-        </p>
+        <div className="mobile-section" data-mobile-active={activeMobilePanel === 'size'}>
+          <div className="step-heading">
+            <span>2</span>
+            <strong>크기 정하기</strong>
+          </div>
+          <fieldset className="segmented">
+            <legend>어떻게 크게 만들까요?</legend>
+            <button
+              type="button"
+              className={settings.mode === 'manual' ? 'active' : ''}
+              onClick={() => updateSetting('mode', 'manual')}
+            >
+              A4 장수로 만들기
+            </button>
+            <button
+              type="button"
+              className={settings.mode === 'target' ? 'active' : ''}
+              onClick={() => updateSetting('mode', 'target')}
+            >
+              완성 크기로 만들기
+            </button>
+          </fieldset>
+          <p className="hint-text">
+            장수를 알면 왼쪽, 원하는 포스터 크기를 알면 오른쪽을 고르세요.
+          </p>
 
-        {settings.mode === 'manual' ? (
+          {settings.mode === 'manual' ? (
           <>
             <label className="field">
               <span>A4 방향</span>
@@ -495,7 +476,37 @@ export default function App() {
               />
             </div>
           </>
-        )}
+          )}
+        </div>
+
+        <div className="mobile-section" data-mobile-active={activeMobilePanel === 'print'}>
+          <div className="step-heading">
+            <span>3</span>
+            <strong>인쇄 설정</strong>
+          </div>
+          <fieldset className="segmented">
+            <legend>이미지 배치</legend>
+            <button
+              type="button"
+              className={settings.fitMode === 'cover' ? 'active' : ''}
+              onClick={() => updateSetting('fitMode', 'cover')}
+            >
+              빈칸 없이 채우기
+            </button>
+            <button
+              type="button"
+              className={settings.fitMode === 'fit' ? 'active' : ''}
+              onClick={() => updateSetting('fitMode', 'fit')}
+            >
+              이미지 안 자르기
+            </button>
+          </fieldset>
+          <p className="hint-text">
+            빈칸 없이 채우기는 일부가 잘릴 수 있고, 이미지 안 자르기는 빈칸이 생길 수 있습니다.
+          </p>
+          <p className="hint-text">
+            회전, 확대, 위치 조정은 미리보기의 작은 도구에서 할 수 있습니다.
+          </p>
 
         <div className="field-grid">
           <NumberField
@@ -607,11 +618,13 @@ export default function App() {
         >
           QA 세팅 내보내기
         </button>
+        </div>
       </section>
 
       <section
         ref={previewPanelRef}
         className="preview-panel"
+        data-mobile-active={activeMobilePanel === 'preview'}
         aria-label="분할 미리보기"
       >
         <PreviewLegend />
@@ -629,7 +642,9 @@ export default function App() {
               className={`preview-canvas ${
                 layoutState.layout.fitMode === 'cover' ? 'is-draggable' : ''
               }`}
+              aria-label="미리보기 이미지 위치 조정"
               onPointerDown={(event) => {
+                if (layoutState.layout?.fitMode !== 'cover') return;
                 event.currentTarget.setPointerCapture(event.pointerId);
                 updateCropFocusFromPointer(event);
               }}
@@ -658,6 +673,23 @@ export default function App() {
           isExporting={isExporting}
         />
       ) : null}
+      <nav className="mobile-bottom-nav" aria-label="모바일 단계 이동">
+        {[
+          ['image', '이미지 선택'],
+          ['size', '크기 정하기'],
+          ['print', '인쇄 설정'],
+          ['preview', '미리보기'],
+        ].map(([panel, label]) => (
+          <button
+            key={panel}
+            type="button"
+            className={activeMobilePanel === panel ? 'active' : ''}
+            onClick={() => setActiveMobilePanel(panel as MobilePanel)}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
     </main>
   );
 }
@@ -763,7 +795,7 @@ function PreviewToolbar({
       >
         확대 원래대로      </button>
       {settings.fitMode === 'cover' ? (
-        <span className="toolbar-hint">마우스로 드래그하여 위치 조정</span>
+        <span className="toolbar-hint">미리보기를 손가락이나 마우스로 드래그하여 위치 조정</span>
       ) : null}
     </div>
   );

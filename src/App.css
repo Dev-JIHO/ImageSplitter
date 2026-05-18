@@ -53,6 +53,12 @@ button:disabled {
   box-shadow: 0 12px 32px rgba(31, 41, 51, 0.08);
 }
 
+.mobile-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 .step-heading {
   display: flex;
   align-items: center;
@@ -505,8 +511,12 @@ button:disabled {
 }
 
 .preview-canvas.is-draggable {
-  cursor: crosshair;
+  cursor: grab;
   touch-action: none;
+}
+
+.preview-canvas.is-draggable:active {
+  cursor: grabbing;
 }
 
 .empty-preview {
@@ -582,22 +592,106 @@ button:disabled {
   gap: 10px;
 }
 
+.mobile-bottom-nav {
+  display: none;
+}
+
 @media (max-width: 860px) {
   .app-shell {
     grid-template-columns: 1fr;
-    padding: 14px;
+    min-height: 100dvh;
+    padding: 12px 12px 78px;
+  }
+
+  .control-panel,
+  .preview-panel {
+    min-height: calc(100dvh - 90px);
+  }
+
+  .control-panel[data-mobile-active="false"],
+  .preview-panel[data-mobile-active="false"],
+  .mobile-section[data-mobile-active="false"] {
+    display: none;
+  }
+
+  .control-panel {
+    align-self: stretch;
+    max-height: calc(100dvh - 90px);
+    overflow: auto;
+    padding: 16px;
   }
 
   .preview-panel {
-    min-height: 420px;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .preview-legend {
+    position: static;
+    max-width: 100%;
+    order: 0;
   }
 
   .preview-toolbar {
+    position: static;
+    order: 1;
     grid-template-columns: 1fr 1fr;
+    width: 100%;
+    max-width: 100%;
   }
 
   .toolbar-range {
     grid-column: 1 / -1;
+  }
+
+  .toolbar-button {
+    min-height: 42px;
+  }
+
+  .toolbar-hint {
+    text-align: left;
+  }
+
+  .preview-canvas {
+    order: 2;
+    max-height: calc(100dvh - 250px);
+    object-fit: contain;
+  }
+
+  .preview-canvas.is-draggable {
+    touch-action: none;
+  }
+
+  .mobile-bottom-nav {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    padding: 8px max(8px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    border-top: 1px solid #d8dcd3;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 -8px 24px rgba(31, 41, 51, 0.12);
+  }
+
+  .mobile-bottom-nav button {
+    min-height: 44px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #344054;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .mobile-bottom-nav button.active {
+    background: #123c69;
+    color: #ffffff;
   }
 }
 
