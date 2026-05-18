@@ -51,6 +51,18 @@ export interface GlueMark {
   previewYmm: number;
 }
 
+export interface ActivePageWindow {
+  startRow: number;
+  endRow: number;
+  startColumn: number;
+  endColumn: number;
+  xMm: number;
+  yMm: number;
+  widthMm: number;
+  heightMm: number;
+  pageCount: number;
+}
+
 export interface PosterLayout {
   fitMode: FitMode;
   sourceX: number;
@@ -80,8 +92,8 @@ export function createPosterLayout(
   }
 
   const contentFrame: RectMm = {
-    x: plan.printerMarginMm,
-    y: plan.printerMarginMm,
+    x: 0,
+    y: 0,
     width: plan.contentWidthMm,
     height: plan.contentHeightMm,
   };
@@ -94,7 +106,7 @@ export function createPosterLayout(
     input.imageScale,
   );
   const imageFrameMm = createImageFrame(outputFrameMm, image, fitMode);
-  const slices = createPageSlices(plan, sourceRect, imageFrameMm);
+  const slices = normalizeSliceLabels(createPageSlices(plan, sourceRect, imageFrameMm));
 
   return {
     fitMode,
@@ -236,32 +248,66 @@ function createOutputFrame(
     return contentFrame;
   }
 
-  if (plan.printerMarginMm > 0) {
-    const width = Math.min(requestedFrame.width, contentFrame.width);
-    const height = Math.min(requestedFrame.height, contentFrame.height);
-    return {
-      x: contentFrame.x + (contentFrame.width - width) / 2,
-      y: contentFrame.y + (contentFrame.height - height) / 2,
-      width,
-      height,
-    };
-  }
-
-  const physicalPrintableFrame = getPhysicalPrintableFrame(plan);
-  const physicalPrintableWidth = physicalPrintableFrame.width;
-  const physicalPrintableHeight = physicalPrintableFrame.height;
-  const width = Math.min(requestedFrame.width, physicalPrintableWidth);
-  const height = Math.min(requestedFrame.height, physicalPrintableHeight);
+  const width = Math.min(requestedFrame.width, contentFrame.width);
+  const height = Math.min(requestedFrame.height, contentFrame.height);
   return {
-    x: (physicalPrintableWidth - width) / 2,
-    y: (physicalPrintableHeight - height) / 2,
+    x: contentFrame.x + (contentFrame.width - width) / 2,
+    y: contentFrame.y + (contentFrame.height - height) / 2,
     width,
     height,
   };
 }
 
-export function getGlueMarks(plan: GridPlan): GlueMark[] {
+export function getGlueMarks(plan: GridPlan, slices?: PageSlice[]): GlueMark[] {
   if (plan.overlapMm <= 0) return [];
+
+  if (slices) {
+    return slices.flatMap((slice) => {
+      const marks: GlueMark[] = [];
+
+      if (slice.column < plan.columns - 1) {
+        const widthMm = Math.min(plan.overlapMm, slice.destWidthMm);
+        const xMm = clamp(
+          slice.destXmm + slice.destWidthMm,
+          0,
+          plan.page.widthMm - widthMm,
+        );
+        const yMm = clamp(slice.destYmm, 0, plan.page.heightMm);
+        marks.push({
+          row: slice.row,
+          column: slice.column,
+          xMm,
+          yMm,
+          widthMm,
+          heightMm: Math.min(slice.destHeightMm, plan.page.heightMm - yMm),
+          previewXmm: slice.column * plan.page.widthMm + xMm,
+          previewYmm: slice.row * plan.page.heightMm + yMm,
+        });
+      }
+
+      if (slice.row < plan.rows - 1) {
+        const heightMm = Math.min(plan.overlapMm, slice.destHeightMm);
+        const xMm = clamp(slice.destXmm, 0, plan.page.widthMm);
+        const yMm = clamp(
+          slice.destYmm + slice.destHeightMm,
+          0,
+          plan.page.heightMm - heightMm,
+        );
+        marks.push({
+          row: slice.row,
+          column: slice.column,
+          xMm,
+          yMm,
+          widthMm: Math.min(slice.destWidthMm, plan.page.widthMm - xMm),
+          heightMm,
+          previewXmm: slice.column * plan.page.widthMm + xMm,
+          previewYmm: slice.row * plan.page.heightMm + yMm,
+        });
+      }
+
+      return marks;
+    });
+  }
 
   const marks: GlueMark[] = [];
   for (let row = 0; row < plan.rows; row += 1) {
@@ -300,6 +346,58 @@ export function getGlueMarks(plan: GridPlan): GlueMark[] {
   return marks;
 }
 
+export function getPreviewPageLabelPosition(plan: GridPlan, slice: PageSlice) {
+  return {
+    x: slice.column * plan.page.widthMm + slice.labelXmm,
+    y: slice.row * plan.page.heightMm + slice.labelYmm,
+  };
+}
+
+export function getActivePageWindow(plan: GridPlan, slices: PageSlice[]): ActivePageWindow {
+  if (slices.length === 0) {
+    return {
+      startRow: 0,
+      endRow: plan.rows - 1,
+      startColumn: 0,
+      endColumn: plan.columns - 1,
+      xMm: 0,
+      yMm: 0,
+      widthMm: plan.totalWidthMm,
+      heightMm: plan.totalHeightMm,
+      pageCount: 0,
+    };
+  }
+
+  const startRow = Math.min(...slices.map((slice) => slice.row));
+  const endRow = Math.max(...slices.map((slice) => slice.row));
+  const startColumn = Math.min(...slices.map((slice) => slice.column));
+  const endColumn = Math.max(...slices.map((slice) => slice.column));
+
+  return {
+    startRow,
+    endRow,
+    startColumn,
+    endColumn,
+    xMm: startColumn * plan.page.widthMm,
+    yMm: startRow * plan.page.heightMm,
+    widthMm: (endColumn - startColumn + 1) * plan.page.widthMm,
+    heightMm: (endRow - startRow + 1) * plan.page.heightMm,
+    pageCount: slices.length,
+  };
+}
+
+function normalizeSliceLabels(slices: PageSlice[]): PageSlice[] {
+  if (slices.length === 0) return slices;
+
+  const startRow = Math.min(...slices.map((slice) => slice.row));
+  const startColumn = Math.min(...slices.map((slice) => slice.column));
+
+  return slices.map((slice) => ({
+    ...slice,
+    labelText: `${slice.row - startRow + 1}-${slice.column - startColumn + 1}`,
+  }));
+}
+
 function createPageSlices(
   plan: GridPlan,
   sourceRect: RectMm,
@@ -311,29 +409,25 @@ function createPageSlices(
     for (let column = 0; column < plan.columns; column += 1) {
       const pageX = column * plan.page.widthMm;
       const pageY = row * plan.page.heightMm;
-      const expandedPage: RectMm = {
-        x: pageX - (column > 0 ? plan.overlapMm : 0),
-        y: pageY - (row > 0 ? plan.overlapMm : 0),
-        width:
-          plan.page.widthMm +
-          (column > 0 ? plan.overlapMm : 0) +
-          (column < plan.columns - 1 ? plan.overlapMm : 0),
-        height:
-          plan.page.heightMm +
-          (row > 0 ? plan.overlapMm : 0) +
-          (row < plan.rows - 1 ? plan.overlapMm : 0),
+      const printableWidth = plan.page.widthMm - plan.printerMarginMm * 2;
+      const printableHeight = plan.page.heightMm - plan.printerMarginMm * 2;
+      const imageWidth = printableWidth - (column < plan.columns - 1 ? plan.overlapMm : 0);
+      const imageHeight = printableHeight - (row < plan.rows - 1 ? plan.overlapMm : 0);
+      const logicalPage: RectMm = {
+        x: column * (printableWidth - plan.overlapMm),
+        y: row * (printableHeight - plan.overlapMm),
+        width: imageWidth,
+        height: imageHeight,
       };
-      const printerFrame = getPagePrinterFrame(plan, row, column);
-      const availablePage =
-        plan.printerMarginMm > 0
-          ? intersectRects(expandedPage, printerFrame)
-          : expandedPage;
-      if (!availablePage) continue;
-      const visible = intersectRects(availablePage, imageFrameMm);
+      const visible = intersectRects(logicalPage, imageFrameMm);
       if (!visible) continue;
 
       const source = mapFrameToSource(visible, imageFrameMm, sourceRect);
       const label = createPageLabel(plan, row, column, visible);
+      const localX = visible.x - logicalPage.x;
+      const localY = visible.y - logicalPage.y;
+      const destXmm = plan.printerMarginMm + localX;
+      const destYmm = plan.printerMarginMm + localY;
       slices.push({
         row,
         column,
@@ -342,12 +436,12 @@ function createPageSlices(
         sourceY: source.y,
         sourceWidth: source.width,
         sourceHeight: source.height,
-        destXmm: visible.x - pageX,
-        destYmm: visible.y - pageY,
+        destXmm,
+        destYmm,
         destWidthMm: visible.width,
         destHeightMm: visible.height,
-        previewXmm: visible.x,
-        previewYmm: visible.y,
+        previewXmm: pageX + destXmm,
+        previewYmm: pageY + destYmm,
         previewWidthMm: visible.width,
         previewHeightMm: visible.height,
         labelText: `${row + 1}-${column + 1}`,
@@ -366,17 +460,31 @@ function createPageLabel(
   column: number,
   visible: RectMm,
 ): Pick<RectMm, 'x' | 'y'> {
-  const pageX = column * plan.page.widthMm;
-  const pageY = row * plan.page.heightMm;
-  const localX = visible.x - pageX;
-  const localY = visible.y - pageY;
+  const printableWidth = plan.page.widthMm - plan.printerMarginMm * 2;
+  const printableHeight = plan.page.heightMm - plan.printerMarginMm * 2;
+  const logicalPageX = column * (printableWidth - plan.overlapMm);
+  const logicalPageY = row * (printableHeight - plan.overlapMm);
+  const localX = plan.printerMarginMm + visible.x - logicalPageX;
+  const localY = plan.printerMarginMm + visible.y - logicalPageY;
   const localRight = localX + visible.width;
   const localBottom = localY + visible.height;
   const labelHeight = 5;
   const inset = 4;
+  const bottomSpace = plan.page.heightMm - localBottom;
+  const rightSpace = plan.page.widthMm - localRight;
 
-  if (plan.page.heightMm - localBottom >= labelHeight + 2) {
-    return { x: inset, y: plan.page.heightMm - inset };
+  if (bottomSpace >= labelHeight + 2) {
+    return {
+      x: Math.max(inset, localX),
+      y: Math.min(plan.page.heightMm - inset, localBottom + labelHeight + 1),
+    };
+  }
+
+  if (rightSpace >= 6) {
+    return {
+      x: localRight + 1,
+      y: clamp(localY + labelHeight + 2, inset + labelHeight, plan.page.heightMm - inset),
+    };
   }
 
   if (localY >= labelHeight + 2) {

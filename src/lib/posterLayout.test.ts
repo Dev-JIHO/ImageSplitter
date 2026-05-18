@@ -2,8 +2,10 @@ import { describe, expect, test } from 'vitest';
 import { createManualGridPlan, recommendTargetGrid } from './geometry';
 import {
   createPosterLayout,
+  getActivePageWindow,
   getGlueMarks,
   getPhysicalPrintableFrame,
+  getPreviewPageLabelPosition,
 } from './posterLayout';
 
 describe('poster layout', () => {
@@ -162,7 +164,7 @@ describe('poster layout', () => {
     });
   });
 
-  test('extends internal page slices by overlap without changing page count', () => {
+  test('reserves internal overlap as a blank glue tab without duplicating image content', () => {
     const plan = createManualGridPlan({
       orientation: 'portrait',
       rows: 1,
@@ -177,8 +179,9 @@ describe('poster layout', () => {
     const [left, right] = layout.slices;
 
     expect(layout.slices).toHaveLength(2);
-    expect(left.destWidthMm).toBeGreaterThan(210);
-    expect(right.destXmm).toBeLessThan(0);
+    expect(left.destWidthMm).toBe(200);
+    expect(right.destXmm).toBe(0);
+    expect(left.sourceX + left.sourceWidth).toBeCloseTo(right.sourceX, 6);
   });
 
   test('centers a target output frame inside the available A4 palette', () => {
@@ -197,15 +200,41 @@ describe('poster layout', () => {
     expect(layout.outputFrameMm.width).toBe(500);
     expect(layout.outputFrameMm.height).toBe(300);
     expect(layout.outputFrameMm.x).toBeCloseTo(
-      (plan.totalWidthMm - 500) / 2,
+      (plan.contentWidthMm - 500) / 2,
       6,
     );
     expect(layout.outputFrameMm.y).toBeCloseTo(
-      (plan.totalHeightMm - 300) / 2,
+      (plan.contentHeightMm - 300) / 2,
       6,
     );
     expect(layout.outputFrameMm.x).toBeCloseTo(
-      (plan.totalWidthMm - 500) / 2,
+      (plan.contentWidthMm - 500) / 2,
+      6,
+    );
+  });
+
+  test('keeps printer-margin compensated content in logical assembled coordinates', () => {
+    const plan = createManualGridPlan({
+      orientation: 'portrait',
+      rows: 4,
+      columns: 4,
+      overlapMm: 0,
+      printerMarginMm: 5,
+    });
+
+    const layout = createPosterLayout(plan, {
+      image: { widthPx: 1000, heightPx: 1000 },
+      fitMode: 'cover',
+    });
+
+    expect(layout.outputFrameMm.x).toBe(0);
+    expect(layout.outputFrameMm.y).toBe(0);
+    expect(layout.outputFrameMm.x + layout.outputFrameMm.width / 2).toBeCloseTo(
+      plan.contentWidthMm / 2,
+      6,
+    );
+    expect(layout.outputFrameMm.y + layout.outputFrameMm.height / 2).toBeCloseTo(
+      plan.contentHeightMm / 2,
       6,
     );
   });
@@ -245,6 +274,92 @@ describe('poster layout', () => {
     expect(layout.slices[0].labelYmm).toBe(293);
   });
 
+  test('places page labels on the bottom glue tab when available', () => {
+    const plan = createManualGridPlan({
+      orientation: 'portrait',
+      rows: 2,
+      columns: 1,
+      overlapMm: 12,
+    });
+    const layout = createPosterLayout(plan, {
+      image: { widthPx: 800, heightPx: 1000 },
+      fitMode: 'cover',
+    });
+    const topSlice = layout.slices.find((slice) => slice.row === 0);
+
+    expect(topSlice).toBeDefined();
+    expect(topSlice!.labelYmm).toBeGreaterThan(
+      topSlice!.destYmm + topSlice!.destHeightMm,
+    );
+    expect(topSlice!.labelYmm).toBeLessThanOrEqual(plan.page.heightMm - 4);
+  });
+
+  test('places page labels on the right glue tab when bottom glue is unavailable', () => {
+    const plan = createManualGridPlan({
+      orientation: 'portrait',
+      rows: 1,
+      columns: 2,
+      overlapMm: 12,
+    });
+    const layout = createPosterLayout(plan, {
+      image: { widthPx: 1000, heightPx: 500 },
+      fitMode: 'cover',
+    });
+    const leftSlice = layout.slices.find((slice) => slice.column === 0);
+
+    expect(leftSlice).toBeDefined();
+    expect(leftSlice!.labelXmm).toBeGreaterThanOrEqual(
+      leftSlice!.destXmm + leftSlice!.destWidthMm,
+    );
+  });
+
+  test('converts page-local label positions to preview-global positions', () => {
+    const plan = createManualGridPlan({
+      orientation: 'portrait',
+      rows: 2,
+      columns: 2,
+      overlapMm: 0,
+    });
+    const layout = createPosterLayout(plan, {
+      image: { widthPx: 800, heightPx: 1000 },
+      fitMode: 'cover',
+    });
+    const slice = layout.slices.find((item) => item.row === 1 && item.column === 1);
+
+    expect(slice).toBeDefined();
+    expect(getPreviewPageLabelPosition(plan, slice!)).toEqual({
+      x: 214,
+      y: 590,
+    });
+  });
+
+  test('calculates the active preview window from pages that actually contain image data', () => {
+    const plan = createManualGridPlan({
+      orientation: 'portrait',
+      rows: 4,
+      columns: 4,
+      overlapMm: 10,
+    });
+    const layout = createPosterLayout(plan, {
+      image: { widthPx: 1000, heightPx: 1000 },
+      fitMode: 'cover',
+      outputFrameMm: { width: 300, height: 300 },
+    });
+    const window = getActivePageWindow(plan, layout.slices);
+
+    expect(window.pageCount).toBe(layout.slices.length);
+    expect(window.pageCount).toBeLessThan(plan.pageCount);
+    expect(window).toMatchObject({
+      startRow: 1,
+      endRow: 2,
+      startColumn: 1,
+      endColumn: 2,
+      widthMm: 420,
+      heightMm: 594,
+    });
+    expect(layout.slices[0].labelText).toBe('1-1');
+  });
+
   test('keeps compensated page slices inside the page printable area', () => {
     const plan = createManualGridPlan({
       orientation: 'portrait',
@@ -267,15 +382,47 @@ describe('poster layout', () => {
     });
   });
 
-  test('creates glue marks on right and bottom overlap tabs', () => {
+  test('preserves the full source image when overlap and printer margin are both set', () => {
+    const plan = createManualGridPlan({
+      orientation: 'landscape',
+      rows: 2,
+      columns: 4,
+      overlapMm: 10,
+      printerMarginMm: 38,
+    });
+    const image = { widthPx: 1448, heightPx: 1161 };
+    const layout = createPosterLayout(plan, {
+      image,
+      fitMode: 'fit',
+    });
+    const minSourceX = Math.min(...layout.slices.map((slice) => slice.sourceX));
+    const minSourceY = Math.min(...layout.slices.map((slice) => slice.sourceY));
+    const maxSourceX = Math.max(
+      ...layout.slices.map((slice) => slice.sourceX + slice.sourceWidth),
+    );
+    const maxSourceY = Math.max(
+      ...layout.slices.map((slice) => slice.sourceY + slice.sourceHeight),
+    );
+
+    expect(minSourceX).toBeCloseTo(0, 6);
+    expect(minSourceY).toBeCloseTo(0, 6);
+    expect(maxSourceX).toBeCloseTo(image.widthPx, 6);
+    expect(maxSourceY).toBeCloseTo(image.heightPx, 6);
+  });
+
+  test('creates glue marks on blank right and bottom glue tabs', () => {
     const plan = createManualGridPlan({
       orientation: 'portrait',
       rows: 2,
       columns: 2,
       overlapMm: 10,
     });
+    const layout = createPosterLayout(plan, {
+      image: { widthPx: 1000, heightPx: 1000 },
+      fitMode: 'cover',
+    });
 
-    const marks = getGlueMarks(plan);
+    const marks = getGlueMarks(plan, layout.slices);
 
     expect(marks).toEqual([
       {
@@ -284,7 +431,7 @@ describe('poster layout', () => {
         xMm: 200,
         yMm: 0,
         widthMm: 10,
-        heightMm: 297,
+        heightMm: 287,
         previewXmm: 200,
         previewYmm: 0,
       },
@@ -293,7 +440,7 @@ describe('poster layout', () => {
         column: 0,
         xMm: 0,
         yMm: 287,
-        widthMm: 210,
+        widthMm: 200,
         heightMm: 10,
         previewXmm: 0,
         previewYmm: 287,
@@ -319,5 +466,56 @@ describe('poster layout', () => {
         previewYmm: 297,
       },
     ]);
+  });
+
+  test('attaches glue marks to printed image edge when printer margin is larger than overlap', () => {
+    const plan = createManualGridPlan({
+      orientation: 'portrait',
+      rows: 1,
+      columns: 2,
+      overlapMm: 5,
+      printerMarginMm: 20,
+    });
+    const layout = createPosterLayout(plan, {
+      image: { widthPx: 1000, heightPx: 500 },
+      fitMode: 'cover',
+    });
+    const marks = getGlueMarks(plan, layout.slices);
+    const leftSlice = layout.slices.find((slice) => slice.row === 0 && slice.column === 0);
+
+    expect(leftSlice).toBeDefined();
+    expect(marks[0]).toMatchObject({
+      row: 0,
+      column: 0,
+      xMm: leftSlice!.destXmm + leftSlice!.destWidthMm,
+      previewXmm: leftSlice!.previewXmm + leftSlice!.previewWidthMm,
+      widthMm: plan.overlapMm,
+    });
+    expect(marks[0].xMm).toBeLessThan(plan.page.widthMm - plan.overlapMm);
+  });
+
+  test('places glue marks outside the printed image when printer margin leaves room', () => {
+    const plan = createManualGridPlan({
+      orientation: 'landscape',
+      rows: 5,
+      columns: 5,
+      overlapMm: 5,
+      printerMarginMm: 38,
+    });
+    const layout = createPosterLayout(plan, {
+      image: { widthPx: 1448, heightPx: 1161 },
+      fitMode: 'fit',
+    });
+    const marks = getGlueMarks(plan, layout.slices);
+    const firstSlice = layout.slices[0];
+    const firstRightMark = marks.find(
+      (mark) => mark.row === firstSlice.row && mark.column === firstSlice.column && mark.widthMm === 5,
+    );
+
+    expect(firstRightMark).toBeDefined();
+    expect(firstRightMark!.xMm).toBeCloseTo(firstSlice.destXmm + firstSlice.destWidthMm, 6);
+    expect(firstRightMark!.xMm).toBeGreaterThanOrEqual(
+      firstSlice.destXmm + firstSlice.destWidthMm,
+    );
   });
 });

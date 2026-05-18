@@ -358,6 +358,10 @@ button:disabled {
   background: #aab4c0;
 }
 
+.qa-export-button {
+  margin-top: -6px;
+}
+
 .preview-panel {
   position: relative;
   display: flex;

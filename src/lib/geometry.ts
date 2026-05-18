@@ -55,8 +55,12 @@ export function createManualGridPlan(input: ManualGridInput): GridPlan {
 
   const totalWidthMm = page.widthMm * input.columns;
   const totalHeightMm = page.heightMm * input.rows;
-  const contentWidthMm = totalWidthMm - printerMarginMm * 2 * input.columns;
-  const contentHeightMm = totalHeightMm - printerMarginMm * 2 * input.rows;
+  const printableWidthMm = page.widthMm - printerMarginMm * 2;
+  const printableHeightMm = page.heightMm - printerMarginMm * 2;
+  const contentWidthMm =
+    printableWidthMm + (input.columns - 1) * (printableWidthMm - input.overlapMm);
+  const contentHeightMm =
+    printableHeightMm + (input.rows - 1) * (printableHeightMm - input.overlapMm);
 
   if (contentWidthMm <= 0 || contentHeightMm <= 0) {
     throw new Error('Margin is too large for the selected grid.');

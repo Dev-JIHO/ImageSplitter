@@ -10,18 +10,30 @@ import { createExportFilename } from './lib/exportFilename';
 import { loadImageFile, type LoadedImage } from './lib/imageLoader';
 import { exportPosterPdf } from './lib/pdfExport';
 import {
+  createQaSettingsFilename,
+  createQaSettingsSnapshot,
+} from './lib/qaSettingsExport';
+import {
   calculatePreviewToolbarPosition,
   type ToolbarPosition,
 } from './lib/previewToolbar';
 import {
   createPosterLayout,
+  getActivePageWindow,
   getGlueMarks,
   getPagePrinterFrame,
-  getPhysicalPrintableFrame,
+  getPreviewPageLabelPosition,
   type CropFocus,
   type FitMode,
   type PosterLayout,
 } from './lib/posterLayout';
+import {
+  GLUE_BORDER_LINE_WIDTH_MM,
+  GLUE_HATCH_LINE_WIDTH_MM,
+  GLUE_HATCH_SPACING_MM,
+  PAGE_NUMBER_FONT_SIZE_PT,
+  PT_TO_MM,
+} from './lib/renderConstants';
 import {
   resolveTargetSize,
   type TargetSizeMode,
@@ -72,6 +84,7 @@ const initialSettings: Settings = {
 
 const supportedImageAccept = 'image/jpeg,image/png,image/webp,image/gif,image/avif';
 const supportedImageText = 'JPG, PNG, WebP, GIF, AVIF 지원';
+const appVersion = '0.1.0';
 
 export default function App() {
   const [settings, setSettings] = useState<Settings>(initialSettings);
@@ -215,6 +228,7 @@ export default function App() {
 
     setIsExporting(true);
     try {
+      const activeWindow = getActivePageWindow(layoutState.plan, layoutState.layout.slices);
       exportPosterPdf({
         image: preparedImage.source,
         plan: layoutState.plan,
@@ -225,9 +239,9 @@ export default function App() {
         showGlueMarks: settings.showGlueMarks,
         filename: createExportFilename({
           originalName: loadedImage.name,
-          rows: layoutState.plan.rows,
-          columns: layoutState.plan.columns,
-          pageCount: layoutState.plan.pageCount,
+          rows: activeWindow.endRow - activeWindow.startRow + 1,
+          columns: activeWindow.endColumn - activeWindow.startColumn + 1,
+          pageCount: layoutState.layout.slices.length,
           targetWidthMm: layoutState.targetSize?.widthMm,
           targetHeightMm: layoutState.targetSize?.heightMm,
         }),
@@ -238,6 +252,36 @@ export default function App() {
     }
   }
 
+  function handleExportQaSettings() {
+    if (!loadedImage || !preparedImage || !layoutState.plan || !layoutState.layout) return;
+
+    const activeWindow = getActivePageWindow(layoutState.plan, layoutState.layout.slices);
+    const snapshot = createQaSettingsSnapshot({
+      appVersion,
+      exportedAt: new Date().toISOString(),
+      originalName: loadedImage.name,
+      imageSize: preparedImage.size,
+      settings: { ...settings },
+      plan: layoutState.plan,
+      layout: layoutState.layout,
+      activeWindow,
+      targetSize: layoutState.targetSize,
+      previewCanvas: canvasRef.current
+        ? {
+            widthPx: canvasRef.current.width,
+            heightPx: canvasRef.current.height,
+          }
+        : undefined,
+      userAgent: window.navigator.userAgent,
+    });
+
+    downloadTextFile(
+      createQaSettingsFilename(loadedImage.name),
+      JSON.stringify(snapshot, null, 2),
+      'application/json',
+    );
+  }
+
   function updateCropFocusFromPointer(event: PointerEvent<HTMLCanvasElement>) {
     if (!layoutState.plan || !layoutState.layout || layoutState.layout.fitMode !== 'cover') {
       return;
@@ -245,13 +289,19 @@ export default function App() {
 
     const canvas = event.currentTarget;
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width / (canvas.width / layoutState.plan.totalWidthMm);
-    const scaleY = canvas.height / rect.height / (canvas.height / layoutState.plan.totalHeightMm);
-    const xMm = (event.clientX - rect.left) * scaleX;
-    const yMm = (event.clientY - rect.top) * scaleY;
+    const activeWindow = getActivePageWindow(layoutState.plan, layoutState.layout.slices);
+    const scaleX = activeWindow.widthMm / rect.width;
+    const scaleY = activeWindow.heightMm / rect.height;
+    const previewXmm = activeWindow.xMm + (event.clientX - rect.left) * scaleX;
+    const previewYmm = activeWindow.yMm + (event.clientY - rect.top) * scaleY;
+    const logicalPoint = mapPreviewPointToLogical(
+      layoutState.plan,
+      previewXmm,
+      previewYmm,
+    );
     const frame = layoutState.layout.imageFrameMm;
-    const x = clamp((xMm - frame.x) / frame.width, 0, 1);
-    const y = clamp((yMm - frame.y) / frame.height, 0, 1);
+    const x = clamp((logicalPoint.x - frame.x) / frame.width, 0, 1);
+    const y = clamp((logicalPoint.y - frame.y) / frame.height, 0, 1);
     updateSetting('cropFocus', { x, y });
   }
 
@@ -449,7 +499,7 @@ export default function App() {
 
         <div className="field-grid">
           <NumberField
-            label="겹침 여백(mm)"
+            label="풀칠 영역(mm)"
             value={settings.overlapMm}
             min={0}
             step={1}
@@ -457,11 +507,11 @@ export default function App() {
           />
         </div>
         <p className="hint-text">
-          한쪽 겹침 영역을 남겨 풀칠하고, 다른 쪽은 잘라내 이어붙일 수 있습니다.
+          이어붙일 가장자리에 남길 빈 탭 크기입니다. 0mm로 두면 풀칠 탭 없이 이미지만 나뉩니다.
         </p>
 
         <fieldset className="segmented segmented-three">
-          <legend>프린터 여백 보정</legend>
+          <legend>여백 설정</legend>
           {[0, 3, 5].map((margin) => (
             <button
               key={margin}
@@ -481,7 +531,7 @@ export default function App() {
           onChange={(value) => updateSetting('printerMarginMm', value)}
         />
         <p className="hint-text">
-          일반 프린터는 3~5mm를 권장합니다. 켜면 같은 크기에 더 많은 A4가 필요할 수 있습니다.
+          프린터가 종이 가장자리에 인쇄하지 못하는 영역입니다. 일반 프린터는 3~5mm를 권장합니다.
         </p>
 
         <fieldset className="segmented segmented-three">
@@ -548,6 +598,14 @@ export default function App() {
           onClick={handleRequestExport}
         >
           {isExporting ? 'PDF 생성 중' : 'PDF 내보내기'}
+        </button>
+        <button
+          type="button"
+          className="secondary-button qa-export-button"
+          disabled={!loadedImage || !layoutState.plan || !layoutState.layout}
+          onClick={handleExportQaSettings}
+        >
+          QA 세팅 내보내기
         </button>
       </section>
 
@@ -737,7 +795,7 @@ function ExportConfirmModal({
           </div>
           <div>
             <dt>총 장수</dt>
-            <dd>{plan.pageCount}장</dd>
+            <dd>{layout.slices.length}장</dd>
           </div>
           <div>
             <dt>배치</dt>
@@ -752,8 +810,8 @@ function ExportConfirmModal({
             <dd>{settings.showPageNumbers ? '표시' : '숨김'}</dd>
           </div>
           <div>
-            <dt>풀칠 영역</dt>
-            <dd>{settings.showGlueMarks ? '표시' : '숨김'}</dd>
+            <dt>풀칠 영역 표시</dt>
+            <dd>{settings.showGlueMarks ? `${settings.overlapMm}mm 표시` : `${settings.overlapMm}mm, 표시 숨김`}</dd>
           </div>
           <div>
             <dt>회전</dt>
@@ -768,7 +826,7 @@ function ExportConfirmModal({
             <dd>{settings.exportDpi} DPI</dd>
           </div>
           <div>
-            <dt>프린터 여백 보정</dt>
+            <dt>여백 설정</dt>
             <dd>{settings.printerMarginMm > 0 ? `${settings.printerMarginMm}mm` : '없음'}</dd>
           </div>
         </dl>
@@ -884,19 +942,23 @@ function Summary({
     return <p className="hint-text">이미지를 업로드하고 설정을 입력해주세요.</p>;
   }
 
+  const activeWindow = getActivePageWindow(plan, layout.slices);
+  const activeRows = activeWindow.endRow - activeWindow.startRow + 1;
+  const activeColumns = activeWindow.endColumn - activeWindow.startColumn + 1;
+
   return (
     <dl className="summary">
       <div>
         <dt>추천/설정</dt>
-        <dd>{plan.orientation === 'portrait' ? 'A4 세로' : 'A4 가로'} · {plan.rows}행 x {plan.columns}열</dd>
+        <dd>{plan.orientation === 'portrait' ? 'A4 세로' : 'A4 가로'} · {activeRows}행 x {activeColumns}열</dd>
       </div>
       <div>
         <dt>PDF</dt>
-        <dd>{plan.pageCount}장</dd>
+        <dd>{layout.slices.length}장</dd>
       </div>
       <div>
         <dt>팔레트</dt>
-        <dd>{round(plan.totalWidthMm)} x {round(plan.totalHeightMm)}mm</dd>
+        <dd>{round(activeWindow.widthMm)} x {round(activeWindow.heightMm)}mm</dd>
       </div>
       <div>
         <dt>이미지 배치</dt>
@@ -924,79 +986,98 @@ function renderPreview(
   if (!context) return;
 
   const maxWidth = 1200;
-  const scale = Math.min(maxWidth / plan.totalWidthMm, 2.1);
-  canvas.width = Math.max(320, Math.round(plan.totalWidthMm * scale));
-  canvas.height = Math.max(220, Math.round(plan.totalHeightMm * scale));
+  const activeWindow = getActivePageWindow(plan, layout.slices);
+  const scale = Math.min(maxWidth / activeWindow.widthMm, 2.1);
+  canvas.width = Math.max(320, Math.round(activeWindow.widthMm * scale));
+  canvas.height = Math.max(220, Math.round(activeWindow.heightMm * scale));
 
   context.fillStyle = '#ffffff';
   context.fillRect(0, 0, canvas.width, canvas.height);
 
   context.save();
   context.scale(scale, scale);
+  context.translate(-activeWindow.xMm, -activeWindow.yMm);
 
   context.fillStyle = 'rgba(229, 76, 76, 0.12)';
-  context.fillRect(0, 0, plan.totalWidthMm, plan.totalHeightMm);
-  const printableFrame = getPhysicalPrintableFrame(plan);
+  context.fillRect(
+    activeWindow.xMm,
+    activeWindow.yMm,
+    activeWindow.widthMm,
+    activeWindow.heightMm,
+  );
   context.clearRect(
-    printableFrame.x,
-    printableFrame.y,
-    printableFrame.width,
-    printableFrame.height,
+    activeWindow.xMm,
+    activeWindow.yMm,
+    activeWindow.widthMm,
+    activeWindow.heightMm,
   );
   context.fillStyle = '#ffffff';
   context.fillRect(
-    printableFrame.x,
-    printableFrame.y,
-    printableFrame.width,
-    printableFrame.height,
+    activeWindow.xMm,
+    activeWindow.yMm,
+    activeWindow.widthMm,
+    activeWindow.heightMm,
   );
+
+  const renderedPages = new Set<string>();
+  layout.slices.forEach((slice) => {
+    const pageKey = `${slice.row}:${slice.column}`;
+    if (renderedPages.has(pageKey)) return;
+    renderedPages.add(pageKey);
+
+    const pageX = slice.column * plan.page.widthMm;
+    const pageY = slice.row * plan.page.heightMm;
+    context.fillStyle = '#ffffff';
+    context.fillRect(pageX, pageY, plan.page.widthMm, plan.page.heightMm);
+  });
 
   if (settings.printerMarginMm > 0) {
     context.fillStyle = 'rgba(126, 87, 194, 0.13)';
-    for (let row = 0; row < plan.rows; row += 1) {
-      for (let column = 0; column < plan.columns; column += 1) {
-        const pageX = column * plan.page.widthMm;
-        const pageY = row * plan.page.heightMm;
-        const printerFrame = getPagePrinterFrame(plan, row, column);
-        context.fillRect(pageX, pageY, plan.page.widthMm, settings.printerMarginMm);
-        context.fillRect(
-          pageX,
-          pageY + plan.page.heightMm - settings.printerMarginMm,
-          plan.page.widthMm,
-          settings.printerMarginMm,
-        );
-        context.fillRect(pageX, pageY, settings.printerMarginMm, plan.page.heightMm);
-        context.fillRect(
-          pageX + plan.page.widthMm - settings.printerMarginMm,
-          pageY,
-          settings.printerMarginMm,
-          plan.page.heightMm,
-        );
-        context.strokeStyle = 'rgba(126, 87, 194, 0.7)';
-        context.lineWidth = Math.max(1 / scale, 0.6);
-        context.strokeRect(
-          printerFrame.x,
-          printerFrame.y,
-          printerFrame.width,
-          printerFrame.height,
-        );
-      }
-    }
+    renderedPages.forEach((pageKey) => {
+      const [row, column] = pageKey.split(':').map(Number);
+      const pageX = column * plan.page.widthMm;
+      const pageY = row * plan.page.heightMm;
+      const printerFrame = getPagePrinterFrame(plan, row, column);
+      context.fillRect(pageX, pageY, plan.page.widthMm, settings.printerMarginMm);
+      context.fillRect(
+        pageX,
+        pageY + plan.page.heightMm - settings.printerMarginMm,
+        plan.page.widthMm,
+        settings.printerMarginMm,
+      );
+      context.fillRect(pageX, pageY, settings.printerMarginMm, plan.page.heightMm);
+      context.fillRect(
+        pageX + plan.page.widthMm - settings.printerMarginMm,
+        pageY,
+        settings.printerMarginMm,
+        plan.page.heightMm,
+      );
+      context.strokeStyle = 'rgba(126, 87, 194, 0.7)';
+      context.lineWidth = Math.max(1 / scale, 0.6);
+      context.strokeRect(
+        printerFrame.x,
+        printerFrame.y,
+        printerFrame.width,
+        printerFrame.height,
+      );
+    });
   }
 
-  context.drawImage(
-    image,
-    layout.sourceX,
-    layout.sourceY,
-    layout.sourceWidth,
-    layout.sourceHeight,
-    layout.imageFrameMm.x,
-    layout.imageFrameMm.y,
-    layout.imageFrameMm.width,
-    layout.imageFrameMm.height,
-  );
+  layout.slices.forEach((slice) => {
+    context.drawImage(
+      image,
+      slice.sourceX,
+      slice.sourceY,
+      slice.sourceWidth,
+      slice.sourceHeight,
+      slice.previewXmm,
+      slice.previewYmm,
+      slice.previewWidthMm,
+      slice.previewHeightMm,
+    );
+  });
 
-  if (settings.overlapMm > 0) {
+  if (settings.showGlueMarks && settings.overlapMm > 0) {
     context.fillStyle = 'rgba(255, 180, 0, 0.12)';
     layout.slices.forEach((slice) => {
       context.fillRect(
@@ -1009,24 +1090,20 @@ function renderPreview(
   }
 
   if (settings.showGlueMarks && settings.overlapMm > 0) {
-    const glueFill = 'rgba(0, 0, 0, 0.02)';
     const glueStroke = 'rgba(0, 0, 0, 0.55)';
-    const hatchSpacing = 2.8;
 
-    context.fillStyle = glueFill;
+    const glueMarks = getGlueMarks(plan, layout.slices);
     context.strokeStyle = glueStroke;
-    context.lineWidth = Math.max(1 / scale, 0.4);
+    context.lineWidth = Math.max(GLUE_HATCH_LINE_WIDTH_MM, 1 / scale);
 
-    getGlueMarks(plan).forEach((mark) => {
-      context.fillRect(mark.previewXmm, mark.previewYmm, mark.widthMm, mark.heightMm);
-
+    glueMarks.forEach((mark) => {
       context.save();
       context.beginPath();
       context.rect(mark.previewXmm, mark.previewYmm, mark.widthMm, mark.heightMm);
       context.clip();
 
       context.beginPath();
-      for (let offset = -mark.heightMm; offset < mark.widthMm; offset += hatchSpacing) {
+      for (let offset = -mark.heightMm; offset < mark.widthMm; offset += GLUE_HATCH_SPACING_MM) {
         context.moveTo(mark.previewXmm + offset, mark.previewYmm);
         context.lineTo(mark.previewXmm + offset + mark.heightMm, mark.previewYmm + mark.heightMm);
       }
@@ -1034,7 +1111,7 @@ function renderPreview(
       context.restore();
 
       context.strokeStyle = glueStroke;
-      context.lineWidth = Math.max(1 / scale, 0.7);
+      context.lineWidth = Math.max(GLUE_BORDER_LINE_WIDTH_MM, 1 / scale);
       context.strokeRect(mark.previewXmm, mark.previewYmm, mark.widthMm, mark.heightMm);
     });
   }
@@ -1043,27 +1120,11 @@ function renderPreview(
   context.strokeStyle = 'rgba(229, 76, 76, 0.95)';
   context.lineWidth = Math.max(1 / scale, 0.8);
   context.strokeRect(
-    printableFrame.x,
-    printableFrame.y,
-    printableFrame.width,
-    printableFrame.height,
+    activeWindow.xMm,
+    activeWindow.yMm,
+    activeWindow.widthMm,
+    activeWindow.heightMm,
   );
-
-  if (
-    layout.outputFrameMm.x !== printableFrame.x ||
-    layout.outputFrameMm.y !== printableFrame.y ||
-    layout.outputFrameMm.width !== printableFrame.width ||
-    layout.outputFrameMm.height !== printableFrame.height
-  ) {
-    context.strokeStyle = 'rgba(20, 31, 45, 0.55)';
-    context.lineWidth = Math.max(1 / scale, 0.7);
-    context.strokeRect(
-      layout.outputFrameMm.x,
-      layout.outputFrameMm.y,
-      layout.outputFrameMm.width,
-      layout.outputFrameMm.height,
-    );
-  }
 
   context.strokeStyle = 'rgba(11, 94, 215, 0.95)';
   context.lineWidth = Math.max(1 / scale, 0.8);
@@ -1071,35 +1132,37 @@ function renderPreview(
 
   for (let column = 1; column < plan.columns; column += 1) {
     const x = column * plan.page.widthMm;
+    if (x <= activeWindow.xMm || x >= activeWindow.xMm + activeWindow.widthMm) continue;
     context.beginPath();
-    context.moveTo(x, 0);
-    context.lineTo(x, plan.totalHeightMm);
+    context.moveTo(x, activeWindow.yMm);
+    context.lineTo(x, activeWindow.yMm + activeWindow.heightMm);
     context.stroke();
   }
   for (let row = 1; row < plan.rows; row += 1) {
     const y = row * plan.page.heightMm;
+    if (y <= activeWindow.yMm || y >= activeWindow.yMm + activeWindow.heightMm) continue;
     context.beginPath();
-    context.moveTo(0, y);
-    context.lineTo(plan.totalWidthMm, y);
+    context.moveTo(activeWindow.xMm, y);
+    context.lineTo(activeWindow.xMm + activeWindow.widthMm, y);
     context.stroke();
   }
 
   context.setLineDash([]);
   context.strokeStyle = 'rgba(20, 31, 45, 0.9)';
-  context.strokeRect(0, 0, plan.totalWidthMm, plan.totalHeightMm);
+  context.strokeRect(
+    activeWindow.xMm,
+    activeWindow.yMm,
+    activeWindow.widthMm,
+    activeWindow.heightMm,
+  );
 
   if (settings.showPageNumbers) {
-    context.font = `${Math.max(11 / scale, 7)}px sans-serif`;
+    context.font = `500 ${PAGE_NUMBER_FONT_SIZE_PT * PT_TO_MM}px sans-serif`;
     context.fillStyle = 'rgba(20, 31, 45, 0.82)';
-    for (let row = 0; row < plan.rows; row += 1) {
-      for (let column = 0; column < plan.columns; column += 1) {
-        context.fillText(
-          `${row + 1}-${column + 1}`,
-          column * plan.page.widthMm + 5 / scale,
-          row * plan.page.heightMm + 15 / scale,
-        );
-      }
-    }
+    layout.slices.forEach((slice) => {
+      const label = getPreviewPageLabelPosition(plan, slice);
+      context.fillText(slice.labelText, label.x, label.y);
+    });
   }
 
   context.restore();
@@ -1117,6 +1180,20 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
+function mapPreviewPointToLogical(plan: GridPlan, previewXmm: number, previewYmm: number) {
+  const column = clamp(Math.floor(previewXmm / plan.page.widthMm), 0, plan.columns - 1);
+  const row = clamp(Math.floor(previewYmm / plan.page.heightMm), 0, plan.rows - 1);
+  const printableWidth = plan.page.widthMm - plan.printerMarginMm * 2;
+  const printableHeight = plan.page.heightMm - plan.printerMarginMm * 2;
+  const localX = previewXmm - column * plan.page.widthMm - plan.printerMarginMm;
+  const localY = previewYmm - row * plan.page.heightMm - plan.printerMarginMm;
+
+  return {
+    x: column * (printableWidth - plan.overlapMm) + localX,
+    y: row * (printableHeight - plan.overlapMm) + localY,
+  };
+}
+
 function normalizeNumberDraft(value: string) {
   const cleaned = value.replace(/[^\d.]/g, '');
   if (cleaned === '') return '';
@@ -1129,6 +1206,18 @@ function normalizeNumberDraft(value: string) {
 
 function normalizeRotation(value: number) {
   return ((value % 360) + 360) % 360;
+}
+
+function downloadTextFile(filename: string, text: string, type: string) {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 function createRotatedImageSource(image: HTMLImageElement, rotationDeg: number) {
