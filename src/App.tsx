@@ -138,7 +138,7 @@ export default function App() {
         plan: null,
         layout: null,
         targetSize: null,
-        error: error instanceof Error ? error.message : '?ㅼ젙???뺤씤?댁＜?몄슂.',
+        error: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
       };
     }
   }, [preparedImage, settings]);
@@ -194,7 +194,7 @@ export default function App() {
         cropFocus: { x: 0.5, y: 0.5 },
       }));
     } catch (error) {
-      setImageError(error instanceof Error ? error.message : '?대?吏 ?낅줈???ㅽ뙣');
+      setImageError(error instanceof Error ? error.message : '이미지를 불러올 수 없습니다.');
     }
   }
 
@@ -585,8 +585,8 @@ export default function App() {
           </>
         ) : (
           <div className="empty-preview">
-            <strong>?대?吏瑜??낅줈?쒗븯硫?誘몃━蹂닿린媛 ?쒖떆?⑸땲??</strong>
-            <span>A4 寃쎄퀎, ?섏씠吏 踰덊샇, ?щ갚 ?곸슜 寃곌낵瑜??뺤씤?????덉뒿?덈떎.</span>
+            <strong>이미지를 불러오면 미리보기에서 확인할 수 있습니다.</strong>
+            <span>A4 용지, 세로 방향, 페이지 번호, 풀칠 영역 등을 설정할 수 있습니다.</span>
           </div>
         )}
       </section>
@@ -606,23 +606,23 @@ export default function App() {
 
 function PreviewLegend() {
   return (
-    <div className="preview-legend" aria-label="誘몃━蹂닿린 ?쒖떆 ?ㅻ챸">
+    <div className="preview-legend" aria-label="미리보기 영역 설명">
       <span>
-        <i className="legend-swatch red" /> 諛붽묑 ?щ갚
+        <i className="legend-swatch red" /> 페이지 경계선
       </span>
       <span>
-        <i className="legend-swatch blue" /> A4 寃쎄퀎
+        <i className="legend-swatch blue" /> A4 용지
       </span>
       <span>
-        <i className="legend-swatch yellow" /> 寃뱀퀜 遺숈씪 ?곸뿭
+        <i className="legend-swatch yellow" /> 분할된 이미지 영역
       </span>
       <span>
-        <i className="legend-swatch purple" /> ?꾨┛???щ갚
+        <i className="legend-swatch purple" /> 페이지 번호
       </span>
       <span>
-        <i className="legend-swatch green" /> 풀칠 영역
+        <i className="legend-swatch black" /> 풀칠 영역
       </span>
-      <span>1-1, 1-2: 遺숈씠???쒖꽌</span>
+      <span>1-1, 1-2: 붙이는 순서</span>
     </div>
   );
 }
@@ -648,7 +648,7 @@ function PreviewToolbar({
       ref={toolbarRef}
       className="preview-toolbar"
       style={{ top: position.top, right: position.right }}
-      aria-label="?대?吏 誘몃━蹂닿린 議곗젙"
+      aria-label="이미지 미리보기 조정"
     >
       <button
         type="button"
@@ -661,7 +661,7 @@ function PreviewToolbar({
           }))
         }
       >
-        ?쇱そ 90??      </button>
+        왼쪽 90도      </button>
       <button
         type="button"
         className="toolbar-button"
@@ -673,9 +673,9 @@ function PreviewToolbar({
           }))
         }
       >
-        ?ㅻⅨ履?90??      </button>
+        오른쪽 90도      </button>
       <label className="toolbar-range">
-        <span>?뺣?</span>
+        <span>확대</span>
         <input
           type="range"
           min={1}
@@ -695,7 +695,7 @@ function PreviewToolbar({
         disabled={settings.fitMode !== 'cover'}
         onClick={() => updateSetting('cropFocus', { x: 0.5, y: 0.5 })}
       >
-        媛?대뜲 留욎땄
+        이미지 가운데
       </button>
       <button
         type="button"
@@ -703,9 +703,9 @@ function PreviewToolbar({
         disabled={settings.fitMode !== 'cover'}
         onClick={() => updateSetting('imageScale', 1)}
       >
-        ?뺣? 珥덇린??      </button>
+        확대 원래대로      </button>
       {settings.fitMode === 'cover' ? (
-        <span className="toolbar-hint">?ъ쭊???쒕옒洹명빐???꾩튂 議곗젙</span>
+        <span className="toolbar-hint">마우스로 드래그하여 위치 조정</span>
       ) : null}
     </div>
   );
@@ -847,18 +847,18 @@ function NumberField(props: {
             type="button"
             tabIndex={-1}
             disabled={props.disabled}
-            aria-label={`${props.label} 利앷?`}
+            aria-label={`${props.label} 증가`}
             onClick={() => stepDraft(1)}
           >
-            ??          </button>
+            +          </button>
           <button
             type="button"
             tabIndex={-1}
             disabled={props.disabled}
-            aria-label={`${props.label} 媛먯냼`}
+            aria-label={`${props.label} 감소`}
             onClick={() => stepDraft(-1)}
           >
-            ??          </button>
+            -          </button>
         </div>
       </div>
     </label>
@@ -1009,11 +1009,32 @@ function renderPreview(
   }
 
   if (settings.showGlueMarks && settings.overlapMm > 0) {
-    context.fillStyle = 'rgba(47, 125, 84, 0.18)';
-    context.strokeStyle = 'rgba(26, 96, 65, 0.8)';
-    context.lineWidth = Math.max(1 / scale, 0.8);
+    const glueFill = 'rgba(0, 0, 0, 0.02)';
+    const glueStroke = 'rgba(0, 0, 0, 0.55)';
+    const hatchSpacing = 2.8;
+
+    context.fillStyle = glueFill;
+    context.strokeStyle = glueStroke;
+    context.lineWidth = Math.max(1 / scale, 0.4);
+
     getGlueMarks(plan).forEach((mark) => {
       context.fillRect(mark.previewXmm, mark.previewYmm, mark.widthMm, mark.heightMm);
+
+      context.save();
+      context.beginPath();
+      context.rect(mark.previewXmm, mark.previewYmm, mark.widthMm, mark.heightMm);
+      context.clip();
+
+      context.beginPath();
+      for (let offset = -mark.heightMm; offset < mark.widthMm; offset += hatchSpacing) {
+        context.moveTo(mark.previewXmm + offset, mark.previewYmm);
+        context.lineTo(mark.previewXmm + offset + mark.heightMm, mark.previewYmm + mark.heightMm);
+      }
+      context.stroke();
+      context.restore();
+
+      context.strokeStyle = glueStroke;
+      context.lineWidth = Math.max(1 / scale, 0.7);
       context.strokeRect(mark.previewXmm, mark.previewYmm, mark.widthMm, mark.heightMm);
     });
   }
@@ -1129,7 +1150,7 @@ function createRotatedImageSource(image: HTMLImageElement, rotationDeg: number) 
 
   const context = canvas.getContext('2d');
   if (!context) {
-    throw new Error('?대?吏瑜??뚯쟾?????놁뒿?덈떎.');
+    throw new Error('이미지를 회전할 수 없습니다.');
   }
 
   context.translate(canvas.width / 2, canvas.height / 2);

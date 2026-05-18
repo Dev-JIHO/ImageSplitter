@@ -70,9 +70,32 @@ export function exportPosterPdf(options: PdfExportOptions) {
       getGlueMarks(options.plan)
         .filter((mark) => mark.row === slice.row && mark.column === slice.column)
         .forEach((mark) => {
-          pdf.setFillColor(218, 239, 226);
-          pdf.setDrawColor(26, 96, 65);
+          pdf.setFillColor(245, 245, 245);
+          pdf.setDrawColor(120, 120, 120);
           pdf.rect(mark.xMm, mark.yMm, mark.widthMm, mark.heightMm, 'F');
+          pdf.setLineWidth(0.10);
+          const hatchSpacing = 3;
+          for (let offset = -mark.heightMm; offset < mark.widthMm; offset += hatchSpacing) {
+            let x1 = mark.xMm + offset;
+            let y1 = mark.yMm;
+            let x2 = x1 + mark.heightMm;
+            let y2 = y1 + mark.heightMm;
+
+            if (x1 < mark.xMm) {
+              y1 += mark.xMm - x1;
+              x1 = mark.xMm;
+            }
+            if (x2 > mark.xMm + mark.widthMm) {
+              y2 -= x2 - (mark.xMm + mark.widthMm);
+              x2 = mark.xMm + mark.widthMm;
+            }
+            if (y2 > mark.yMm + mark.heightMm) {
+              x2 -= y2 - (mark.yMm + mark.heightMm);
+              y2 = mark.yMm + mark.heightMm;
+            }
+
+            pdf.line(x1, y1, x2, y2);
+          }
           pdf.setLineWidth(0.25);
           pdf.rect(mark.xMm, mark.yMm, mark.widthMm, mark.heightMm);
         });
