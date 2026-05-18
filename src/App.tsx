@@ -102,6 +102,12 @@ export default function App() {
   const previewPanelRef = useRef<HTMLElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const toolbarRef = useRef<HTMLDivElement | null>(null);
+  const cropDragRef = useRef<{
+    pointerId: number;
+    startClientX: number;
+    startClientY: number;
+    startFocus: CropFocus;
+  } | null>(null);
 
   const preparedImage = useMemo(() => {
     if (!loadedImage) return null;
@@ -284,26 +290,23 @@ export default function App() {
     );
   }
 
-  function updateCropFocusFromPointer(event: PointerEvent<HTMLCanvasElement>) {
+  function updateCropFocusFromDrag(event: PointerEvent<HTMLCanvasElement>) {
     if (!layoutState.plan || !layoutState.layout || layoutState.layout.fitMode !== 'cover') {
       return;
     }
+    const drag = cropDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
 
     const canvas = event.currentTarget;
     const rect = canvas.getBoundingClientRect();
     const activeWindow = getActivePageWindow(layoutState.plan, layoutState.layout.slices);
     const scaleX = activeWindow.widthMm / rect.width;
     const scaleY = activeWindow.heightMm / rect.height;
-    const previewXmm = activeWindow.xMm + (event.clientX - rect.left) * scaleX;
-    const previewYmm = activeWindow.yMm + (event.clientY - rect.top) * scaleY;
-    const logicalPoint = mapPreviewPointToLogical(
-      layoutState.plan,
-      previewXmm,
-      previewYmm,
-    );
+    const deltaXmm = (event.clientX - drag.startClientX) * scaleX;
+    const deltaYmm = (event.clientY - drag.startClientY) * scaleY;
     const frame = layoutState.layout.imageFrameMm;
-    const x = clamp((logicalPoint.x - frame.x) / frame.width, 0, 1);
-    const y = clamp((logicalPoint.y - frame.y) / frame.height, 0, 1);
+    const x = clamp(drag.startFocus.x - deltaXmm / frame.width, 0, 1);
+    const y = clamp(drag.startFocus.y - deltaYmm / frame.height, 0, 1);
     updateSetting('cropFocus', { x, y });
   }
 
@@ -646,13 +649,22 @@ export default function App() {
               onPointerDown={(event) => {
                 if (layoutState.layout?.fitMode !== 'cover') return;
                 event.currentTarget.setPointerCapture(event.pointerId);
-                updateCropFocusFromPointer(event);
+                cropDragRef.current = {
+                  pointerId: event.pointerId,
+                  startClientX: event.clientX,
+                  startClientY: event.clientY,
+                  startFocus: settings.cropFocus,
+                };
               }}
               onPointerMove={(event) => {
-                if (event.buttons === 1) updateCropFocusFromPointer(event);
+                if (event.buttons === 1) updateCropFocusFromDrag(event);
               }}
               onPointerUp={(event) => {
                 event.currentTarget.releasePointerCapture(event.pointerId);
+                cropDragRef.current = null;
+              }}
+              onPointerCancel={() => {
+                cropDragRef.current = null;
               }}
             />
           </>
