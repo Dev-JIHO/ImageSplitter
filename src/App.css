@@ -28,6 +28,12 @@ button:disabled {
   cursor: not-allowed;
 }
 
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #0b5ed7;
+  outline-offset: 2px;
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
@@ -78,6 +84,10 @@ button:disabled {
   color: #ffffff;
   font-size: 13px;
   font-weight: 800;
+}
+
+.step-heading span.done {
+  background: #1d7a4f;
 }
 
 .step-heading strong {
@@ -249,6 +259,40 @@ button:disabled {
   background: #ffffff;
   color: #344054;
   font-weight: 750;
+}
+
+.segmented button,
+.secondary-button,
+.toolbar-button,
+.export-button {
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.secondary-button:hover:not(:disabled),
+.toolbar-button:hover:not(:disabled) {
+  border-color: #123c69;
+  background: #f3f7fb;
+  color: #123c69;
+}
+
+.segmented button:not(.active):hover:not(:disabled) {
+  background: #e8edf3;
+}
+
+.export-button:hover:not(:disabled) {
+  background: #0a51b8;
+}
+
+.seam-test-block {
+  display: grid;
+  gap: 8px;
+}
+
+.hint-text.small {
+  font-size: 12px;
 }
 
 .crop-controls,
@@ -551,13 +595,27 @@ button:disabled {
 .empty-preview {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-width: 360px;
+  gap: 10px;
+  max-width: 380px;
   padding: 24px;
   border: 1px solid #d8dcd3;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.92);
   text-align: center;
+}
+
+.empty-steps {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0 0 0 22px;
+  color: #344054;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.empty-preview span {
+  font-size: 13px;
 }
 
 .modal-backdrop {
@@ -676,7 +734,12 @@ button:disabled {
   }
 
   .toolbar-button {
-    min-height: 42px;
+    min-height: 44px;
+  }
+
+  .segmented button,
+  .secondary-button {
+    min-height: 44px;
   }
 
   .toolbar-hint {

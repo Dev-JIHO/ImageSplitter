@@ -9,6 +9,7 @@ import {
 import { createExportFilename } from './lib/exportFilename';
 import { loadImageFile, type LoadedImage } from './lib/imageLoader';
 import { exportPosterPdf } from './lib/pdfExport';
+import { exportSeamTestPdf } from './lib/seamTestPdf';
 import {
   createQaSettingsFilename,
   createQaSettingsSnapshot,
@@ -231,6 +232,30 @@ export default function App() {
     };
   }, [loadedImage, layoutState.plan, layoutState.layout, settings]);
 
+  // 마우스 휠로 확대/축소 (cover 모드). 페이지 스크롤을 막아야 해서 non-passive로 등록.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !loadedImage || !layoutState.layout) return;
+
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      setSettings((current) => {
+        if (current.fitMode !== 'cover') return current;
+        const next = clamp(
+          current.imageScale + (event.deltaY < 0 ? 0.05 : -0.05),
+          1,
+          2,
+        );
+        return next === current.imageScale
+          ? current
+          : { ...current, imageScale: next };
+      });
+    };
+
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', onWheel);
+  }, [loadedImage, layoutState.layout]);
+
   async function handleFileChange(file: File | undefined) {
     setImageError('');
     if (!file) return;
@@ -238,6 +263,8 @@ export default function App() {
     try {
       const nextImage = await loadImageFile(file);
       setLoadedImage(nextImage);
+      // 모바일: 이미지를 올리면 자연스럽게 다음 단계로 이동
+      setActiveMobilePanel((panel) => (panel === 'image' ? 'size' : panel));
       setSettings((current) => ({
         ...current,
         rotationDeg: 0,
@@ -324,6 +351,14 @@ export default function App() {
     );
   }
 
+  function handleExportSeamTest() {
+    exportSeamTestPdf({
+      orientation: layoutState.plan?.orientation ?? settings.orientation,
+      overlapMm: settings.overlapMm,
+      printerMarginMm: settings.printerMarginMm,
+    });
+  }
+
   function updateCropFocusFromDrag(event: PointerEvent<HTMLCanvasElement>) {
     if (!layoutState.plan || !layoutState.layout || layoutState.layout.fitMode !== 'cover') {
       return;
@@ -358,7 +393,7 @@ export default function App() {
           </div>
 
           <div className="step-heading">
-            <span>1</span>
+            <span className={loadedImage ? 'done' : ''}>{loadedImage ? '✓' : '1'}</span>
             <strong>이미지 선택</strong>
           </div>
           <label
@@ -398,7 +433,9 @@ export default function App() {
 
         <div className="mobile-section" data-mobile-active={activeMobilePanel === 'size'}>
           <div className="step-heading">
-            <span>2</span>
+            <span className={loadedImage && !layoutState.error ? 'done' : ''}>
+              {loadedImage && !layoutState.error ? '✓' : '2'}
+            </span>
             <strong>크기 정하기</strong>
           </div>
           <fieldset className="segmented">
@@ -644,6 +681,21 @@ export default function App() {
           인쇄 창에서 반드시 실제 크기 또는 100%를 선택하고, 용지에 맞춤은 꺼주세요.
         </p>
 
+        <div className="seam-test-block">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={handleExportSeamTest}
+          >
+            접합 테스트 PDF 받기 (A4 2장)
+          </button>
+          <p className="hint-text">
+            포스터를 인쇄하기 전에 2장만 인쇄해 붙여보세요. 크기가 정확한지(100mm 기준
+            사각형)와 이음새가 매끄럽게 이어지는지(눈금·원·사선)를 미리 확인할 수
+            있습니다. 이미지 없이도 현재 인쇄 설정으로 만들어집니다.
+          </p>
+        </div>
+
         <Summary
           plan={layoutState.plan}
           layout={layoutState.layout}
@@ -703,6 +755,11 @@ export default function App() {
               onPointerCancel={() => {
                 cropDragRef.current = null;
               }}
+              onDoubleClick={() => {
+                if (layoutState.layout?.fitMode === 'cover') {
+                  updateSetting('cropFocus', { x: 0.5, y: 0.5 });
+                }
+              }}
             />
             <div
               ref={exportNavRef}
@@ -718,12 +775,21 @@ export default function App() {
               >
                 {isExporting ? 'PDF 생성 중' : 'PDF 내보내기'}
               </button>
+              <p className="hint-text small">
+                인쇄 후 1-1부터 행 순서대로, 빗금(풀칠) 영역 위에 다음 장을 붙이세요.
+              </p>
             </div>
           </>
         ) : (
           <div className="empty-preview">
             <strong>이미지를 불러오면 미리보기에서 확인할 수 있습니다.</strong>
-            <span>A4 용지, 세로 방향, 페이지 번호, 풀칠 영역 등을 설정할 수 있습니다.</span>
+            <ol className="empty-steps">
+              <li>왼쪽에서 사진 파일을 선택하세요.</li>
+              <li>A4 장수 또는 완성 크기를 정하세요.</li>
+              <li>미리보기를 확인하고 PDF로 내보내세요.</li>
+              <li>인쇄한 뒤 1-1부터 번호 순서대로 풀칠해 붙이세요.</li>
+            </ol>
+            <span>처음이라면 인쇄 설정의 접합 테스트 PDF로 프린터를 먼저 확인해보세요.</span>
           </div>
         )}
       </section>
@@ -740,7 +806,7 @@ export default function App() {
       ) : null}
       <nav className="mobile-bottom-nav" aria-label="모바일 단계 이동">
         {[
-          ['image', '이미지 선택'],
+          ['image', loadedImage ? '이미지 ✓' : '이미지 선택'],
           ['size', '크기 정하기'],
           ['print', '인쇄 설정'],
           ['preview', '미리보기'],
@@ -860,7 +926,9 @@ function PreviewToolbar({
       >
         확대 원래대로      </button>
       {settings.fitMode === 'cover' ? (
-        <span className="toolbar-hint">미리보기를 손가락이나 마우스로 드래그하여 위치 조정</span>
+        <span className="toolbar-hint">
+          드래그로 위치 조정 · 휠 또는 슬라이더로 확대 · 더블클릭으로 가운데
+        </span>
       ) : null}
     </div>
   );
