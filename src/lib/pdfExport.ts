@@ -5,6 +5,7 @@ import {
   GLUE_HATCH_LINE_WIDTH_MM,
   GLUE_HATCH_SPACING_MM,
   PAGE_NUMBER_FONT_SIZE_PT,
+  PAGE_NUMBER_SUBTLE_FONT_SIZE_PT,
 } from './renderConstants';
 import { getGlueMarks, type PageSlice, type PosterLayout } from './posterLayout';
 import { scaleAboutPageCenter } from './printScale';
@@ -89,8 +90,14 @@ export async function exportPosterPdf(options: PdfExportOptions) {
     }
 
     if (options.showPageNumbers) {
-      pdf.setFontSize(PAGE_NUMBER_FONT_SIZE_PT * k);
-      pdf.setTextColor(35, 45, 57);
+      if (slice.labelSubtle) {
+        // 풀칠 탭이 없어 이미지 위에 표시되는 번호: 작고 옅게
+        pdf.setFontSize(PAGE_NUMBER_SUBTLE_FONT_SIZE_PT * k);
+        pdf.setTextColor(160, 160, 160);
+      } else {
+        pdf.setFontSize(PAGE_NUMBER_FONT_SIZE_PT * k);
+        pdf.setTextColor(35, 45, 57);
+      }
       pdf.text(slice.labelText, sx(slice.labelXmm), sy(slice.labelYmm));
     }
 

@@ -31,6 +31,7 @@ import {
   GLUE_HATCH_LINE_WIDTH_MM,
   GLUE_HATCH_SPACING_MM,
   PAGE_NUMBER_FONT_SIZE_PT,
+  PAGE_NUMBER_SUBTLE_FONT_SIZE_PT,
   PT_TO_MM,
 } from './lib/renderConstants';
 import {
@@ -797,7 +798,8 @@ export default function App() {
                 {isExporting ? 'PDF 생성 중' : 'PDF 내보내기'}
               </button>
               <p className="hint-text small">
-                인쇄 후 1-1부터 행 순서대로, 빗금(풀칠) 영역 위에 다음 장을 붙이세요.
+                인쇄 후 1-1부터 행 순서대로, 빗금(풀칠) 영역 위에 이웃 장을 겹쳐
+                붙이세요.
               </p>
             </div>
           </>
@@ -1389,9 +1391,14 @@ function renderPreview(
   );
 
   if (settings.showPageNumbers) {
-    context.font = `500 ${PAGE_NUMBER_FONT_SIZE_PT * PT_TO_MM}px sans-serif`;
-    context.fillStyle = 'rgba(20, 31, 45, 0.82)';
     layout.slices.forEach((slice) => {
+      if (slice.labelSubtle) {
+        context.font = `500 ${PAGE_NUMBER_SUBTLE_FONT_SIZE_PT * PT_TO_MM}px sans-serif`;
+        context.fillStyle = 'rgba(120, 128, 138, 0.55)';
+      } else {
+        context.font = `500 ${PAGE_NUMBER_FONT_SIZE_PT * PT_TO_MM}px sans-serif`;
+        context.fillStyle = 'rgba(20, 31, 45, 0.82)';
+      }
       const label = getPreviewPageLabelPosition(plan, slice);
       context.fillText(slice.labelText, label.x, label.y);
     });

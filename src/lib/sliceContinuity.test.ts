@@ -52,52 +52,46 @@ function verifyContinuity(c: Case) {
     c.imageHeightPx + EPSILON,
   );
 
-  // 2) 가로 방향 연속성: 같은 행에서 인접 슬라이스의 소스 경계가 정확히 맞닿아야 한다.
-  const rows = [...new Set(layout.slices.map((s) => s.row))].sort((a, b) => a - b);
-  rows.forEach((row) => {
-    const rowSlices = layout.slices
-      .filter((s) => s.row === row)
-      .sort((a, b) => a.column - b.column);
-
-    expect(rowSlices[0].sourceX).toBeCloseTo(layout.sourceX, 4);
-    for (let i = 1; i < rowSlices.length; i += 1) {
-      const prev = rowSlices[i - 1];
-      expect(prev.sourceX + prev.sourceWidth).toBeCloseTo(rowSlices[i].sourceX, 4);
-    }
-    const last = rowSlices[rowSlices.length - 1];
-    if (c.fitMode === 'cover') {
-      expect(last.sourceX + last.sourceWidth).toBeCloseTo(
-        layout.sourceX + layout.sourceWidth,
-        4,
-      );
-    }
+  // 2) 슬라이스 소스 영역들이 전체 크롭 영역(sourceRect)을 빈틈·중복 없이
+  //    타일링해야 한다. (탭 재분배로 마지막 두 열이 벽돌 패턴이 되어도 성립하는
+  //    2차원 불변식: 면적 합 일치 + 쌍별 무중복 + 프레임 내부)
+  const frameArea = layout.sourceWidth * layout.sourceHeight;
+  let areaSum = 0;
+  layout.slices.forEach((s) => {
+    areaSum += s.sourceWidth * s.sourceHeight;
+    expect(s.sourceX).toBeGreaterThanOrEqual(layout.sourceX - 1e-6);
+    expect(s.sourceY).toBeGreaterThanOrEqual(layout.sourceY - 1e-6);
+    expect(s.sourceX + s.sourceWidth).toBeLessThanOrEqual(
+      layout.sourceX + layout.sourceWidth + 1e-6,
+    );
+    expect(s.sourceY + s.sourceHeight).toBeLessThanOrEqual(
+      layout.sourceY + layout.sourceHeight + 1e-6,
+    );
   });
+  expect(Math.abs(areaSum - frameArea) / frameArea).toBeLessThan(1e-9);
 
-  // 3) 세로 방향 연속성: 같은 열에서 인접 슬라이스의 소스 경계가 정확히 맞닿아야 한다.
-  const columns = [...new Set(layout.slices.map((s) => s.column))].sort(
-    (a, b) => a - b,
-  );
-  columns.forEach((column) => {
-    const columnSlices = layout.slices
-      .filter((s) => s.column === column)
-      .sort((a, b) => a.row - b.row);
-
-    expect(columnSlices[0].sourceY).toBeCloseTo(layout.sourceY, 4);
-    for (let i = 1; i < columnSlices.length; i += 1) {
-      const prev = columnSlices[i - 1];
-      expect(prev.sourceY + prev.sourceHeight).toBeCloseTo(columnSlices[i].sourceY, 4);
-    }
-    const last = columnSlices[columnSlices.length - 1];
-    if (c.fitMode === 'cover') {
-      expect(last.sourceY + last.sourceHeight).toBeCloseTo(
-        layout.sourceY + layout.sourceHeight,
-        4,
+  for (let i = 0; i < layout.slices.length; i += 1) {
+    for (let j = i + 1; j < layout.slices.length; j += 1) {
+      const a = layout.slices[i];
+      const b = layout.slices[j];
+      const overlapW = Math.max(
+        0,
+        Math.min(a.sourceX + a.sourceWidth, b.sourceX + b.sourceWidth) -
+          Math.max(a.sourceX, b.sourceX),
       );
+      const overlapH = Math.max(
+        0,
+        Math.min(a.sourceY + a.sourceHeight, b.sourceY + b.sourceHeight) -
+          Math.max(a.sourceY, b.sourceY),
+      );
+      expect((overlapW * overlapH) / frameArea).toBeLessThan(1e-9);
     }
-  });
+  }
 
-  // 4) cover 모드에서는 이어붙인 크기(논리 콘텐츠)가 전부 이미지로 덮여야 한다.
+  // 3) cover 모드에서는 행/열별 이미지 폭·높이 합이 콘텐츠 크기와 일치해야 한다.
   if (c.fitMode === 'cover') {
+    const rows = [...new Set(layout.slices.map((s) => s.row))];
+    const columns = [...new Set(layout.slices.map((s) => s.column))];
     rows.forEach((row) => {
       const rowSlices = layout.slices.filter((s) => s.row === row);
       const totalWidth = rowSlices.reduce((sum, s) => sum + s.destWidthMm, 0);

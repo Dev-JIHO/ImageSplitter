@@ -38,6 +38,8 @@ export interface PageSlice {
   labelText: string;
   labelXmm: number;
   labelYmm: number;
+  /** 풀칠 탭이 없어 라벨을 이미지 위에 옅게 표시해야 하는 경우 */
+  labelSubtle: boolean;
 }
 
 export interface GlueMark {
@@ -423,11 +425,16 @@ function createPageSlices(
       if (!visible) continue;
 
       const source = mapFrameToSource(visible, imageFrameMm, sourceRect);
-      const label = createPageLabel(plan, row, column, visible);
       const localX = visible.x - logicalPage.x;
       const localY = visible.y - logicalPage.y;
       const destXmm = plan.printerMarginMm + localX;
       const destYmm = plan.printerMarginMm + localY;
+      const label = createPageLabel(plan, {
+        x: destXmm,
+        y: destYmm,
+        width: visible.width,
+        height: visible.height,
+      });
       slices.push({
         row,
         column,
@@ -447,6 +454,7 @@ function createPageSlices(
         labelText: `${row + 1}-${column + 1}`,
         labelXmm: label.x,
         labelYmm: label.y,
+        labelSubtle: label.subtle,
       });
     }
   }
@@ -454,52 +462,81 @@ function createPageSlices(
   return slices;
 }
 
+interface PageLabelPlacement {
+  x: number;
+  y: number;
+  subtle: boolean;
+}
+
+const LABEL_HEIGHT_MM = 5;
+
+/**
+ * 페이지 번호 위치.
+ *
+ * 인쇄 가능 영역 안에서 이미지 밖의 빈 공간(풀칠 탭 또는 fit 모드의 여백)을
+ * 아래 → 오른쪽 → 위 → 왼쪽 순서로 찾는다. 마지막 장처럼 이미지가 인쇄
+ * 영역을 꽉 채워 빈 공간이 전혀 없으면, 이미지 안쪽 모서리에 작고 옅은
+ * 글씨(subtle)로 표시한다.
+ *
+ * 참고: "모든 페이지에 풀칠 탭이 생기도록 재분배"하는 방안은 네 페이지가
+ * 만나는 교차점에서 탭 소유권이 바람개비 모양으로 순환할 수밖에 없어
+ * 이미지에 빈 구멍이 생기므로 기하학적으로 불가능하다.
+ */
 function createPageLabel(
   plan: GridPlan,
-  row: number,
-  column: number,
-  visible: RectMm,
-): Pick<RectMm, 'x' | 'y'> {
-  const printableWidth = plan.page.widthMm - plan.printerMarginMm * 2;
-  const printableHeight = plan.page.heightMm - plan.printerMarginMm * 2;
-  const logicalPageX = column * (printableWidth - plan.overlapMm);
-  const logicalPageY = row * (printableHeight - plan.overlapMm);
-  const localX = plan.printerMarginMm + visible.x - logicalPageX;
-  const localY = plan.printerMarginMm + visible.y - logicalPageY;
-  const localRight = localX + visible.width;
-  const localBottom = localY + visible.height;
-  const labelHeight = 5;
-  const inset = 4;
-  const bottomSpace = plan.page.heightMm - localBottom;
-  const rightSpace = plan.page.widthMm - localRight;
+  dest: RectMm,
+): PageLabelPlacement {
+  const printableLeft = plan.printerMarginMm;
+  const printableTop = plan.printerMarginMm;
+  const printableRight = plan.page.widthMm - plan.printerMarginMm;
+  const printableBottom = plan.page.heightMm - plan.printerMarginMm;
+  const left = dest.x;
+  const top = dest.y;
+  const right = dest.x + dest.width;
+  const bottom = dest.y + dest.height;
 
-  if (bottomSpace >= labelHeight + 2) {
+  // 1) 이미지 아래의 빈 공간 (아래 풀칠 탭 또는 fit 모드의 빈 영역)
+  if (printableBottom - bottom >= LABEL_HEIGHT_MM + 1.5) {
     return {
-      x: Math.max(inset, localX),
-      y: Math.min(plan.page.heightMm - inset, localBottom + labelHeight + 1),
+      x: Math.max(printableLeft + 0.5, left),
+      y: bottom + LABEL_HEIGHT_MM + 0.5,
+      subtle: false,
     };
   }
 
-  if (rightSpace >= 6) {
+  // 2) 이미지 오른쪽의 빈 공간 (오른쪽 풀칠 탭 등)
+  if (printableRight - right >= 6) {
     return {
-      x: localRight + 1,
-      y: clamp(localY + labelHeight + 2, inset + labelHeight, plan.page.heightMm - inset),
+      x: right + 1,
+      y: clamp(top + LABEL_HEIGHT_MM + 2, printableTop + LABEL_HEIGHT_MM, printableBottom - 1),
+      subtle: false,
     };
   }
 
-  if (localY >= labelHeight + 2) {
-    return { x: inset, y: Math.max(inset + labelHeight, localY - 2) };
+  // 3) 이미지 위의 빈 공간
+  if (top - printableTop >= LABEL_HEIGHT_MM + 1.5) {
+    return {
+      x: Math.max(printableLeft + 0.5, left),
+      y: top - 1.5,
+      subtle: false,
+    };
   }
 
-  if (localX >= 24) {
-    return { x: inset, y: plan.page.heightMm - inset };
+  // 4) 이미지 왼쪽의 빈 공간
+  if (left - printableLeft >= 6) {
+    return {
+      x: Math.max(printableLeft + 0.5, left - 6),
+      y: clamp(top + LABEL_HEIGHT_MM + 2, printableTop + LABEL_HEIGHT_MM, printableBottom - 1),
+      subtle: false,
+    };
   }
 
-  if (plan.page.widthMm - localRight >= 24) {
-    return { x: localRight + 2, y: plan.page.heightMm - inset };
-  }
-
-  return { x: inset, y: plan.page.heightMm - inset };
+  // 5) 빈 공간이 없으면(마지막 장, 풀칠 0mm 등): 이미지 안쪽 모서리에 옅게
+  return {
+    x: Math.max(left + 1.5, right - 14),
+    y: Math.max(top + LABEL_HEIGHT_MM, bottom - 2),
+    subtle: true,
+  };
 }
 
 function mapFrameToSource(

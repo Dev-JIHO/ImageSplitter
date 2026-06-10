@@ -257,7 +257,7 @@ describe('poster layout', () => {
     expect(frame.width).toBeGreaterThan(plan.contentWidthMm);
   });
 
-  test('places page labels near the page bottom when no separate margin exists', () => {
+  test('빈 공간이 전혀 없으면 라벨을 이미지 안쪽 모서리에 옅게(subtle) 배치한다', () => {
     const plan = createManualGridPlan({
       orientation: 'portrait',
       rows: 1,
@@ -271,7 +271,9 @@ describe('poster layout', () => {
     });
 
     expect(layout.slices[0].labelText).toBe('1-1');
-    expect(layout.slices[0].labelYmm).toBe(293);
+    expect(layout.slices[0].labelSubtle).toBe(true);
+    expect(layout.slices[0].labelXmm).toBe(196);
+    expect(layout.slices[0].labelYmm).toBe(295);
   });
 
   test('places page labels on the bottom glue tab when available', () => {
@@ -327,9 +329,11 @@ describe('poster layout', () => {
     const slice = layout.slices.find((item) => item.row === 1 && item.column === 1);
 
     expect(slice).toBeDefined();
+    // 풀칠 0mm의 마지막 장은 이미지 모서리에 subtle 배치된다.
+    expect(slice!.labelSubtle).toBe(true);
     expect(getPreviewPageLabelPosition(plan, slice!)).toEqual({
-      x: 214,
-      y: 590,
+      x: 406,
+      y: 592,
     });
   });
 
