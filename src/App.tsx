@@ -99,15 +99,24 @@ export default function App() {
     top: 12,
     right: 12,
   });
+  const [exportNavPosition, setExportNavPosition] = useState({ top: 12, right: 12 });
   const previewPanelRef = useRef<HTMLElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const toolbarRef = useRef<HTMLDivElement | null>(null);
+  const exportNavRef = useRef<HTMLDivElement | null>(null);
   const cropDragRef = useRef<{
     pointerId: number;
     startClientX: number;
     startClientY: number;
     startFocus: CropFocus;
   } | null>(null);
+
+  // 이미지가 교체되거나 컴포넌트가 사라질 때 이전 objectURL을 해제한다.
+  useEffect(() => {
+    if (!loadedImage) return;
+    const { url } = loadedImage;
+    return () => URL.revokeObjectURL(url);
+  }, [loadedImage]);
 
   const preparedImage = useMemo(() => {
     if (!loadedImage) return null;
@@ -182,20 +191,43 @@ export default function App() {
       const panel = previewPanelRef.current;
       const canvas = canvasRef.current;
       const toolbar = toolbarRef.current;
-      if (!panel || !canvas || !toolbar) return;
+      const exportNav = exportNavRef.current;
+      if (!panel || !canvas || !toolbar || !exportNav) return;
+      const panelRect = panel.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
 
       setToolbarPosition(
         calculatePreviewToolbarPosition(
-          panel.getBoundingClientRect(),
-          canvas.getBoundingClientRect(),
+          panelRect,
+          canvasRect,
           toolbar.getBoundingClientRect(),
         ),
       );
+      setExportNavPosition({
+        top: Math.max(12, canvasRect.bottom - panelRect.top + 8),
+        right: Math.max(0, panelRect.right - canvasRect.right),
+      });
     };
 
     updateToolbarPosition();
     window.addEventListener('resize', updateToolbarPosition);
-    return () => window.removeEventListener('resize', updateToolbarPosition);
+
+    const panel = previewPanelRef.current;
+    panel?.addEventListener('scroll', updateToolbarPosition, { passive: true });
+
+    // 창 크기 외에 패널/캔버스 자체 크기 변화(모바일 패널 전환 등)에도 반응한다.
+    let observer: ResizeObserver | undefined;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(updateToolbarPosition);
+      if (panel) observer.observe(panel);
+      if (canvasRef.current) observer.observe(canvasRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateToolbarPosition);
+      panel?.removeEventListener('scroll', updateToolbarPosition);
+      observer?.disconnect();
+    };
   }, [loadedImage, layoutState.plan, layoutState.layout, settings]);
 
   async function handleFileChange(file: File | undefined) {
@@ -204,10 +236,7 @@ export default function App() {
 
     try {
       const nextImage = await loadImageFile(file);
-      setLoadedImage((previous) => {
-        if (previous) URL.revokeObjectURL(previous.url);
-        return nextImage;
-      });
+      setLoadedImage(nextImage);
       setSettings((current) => ({
         ...current,
         rotationDeg: 0,
@@ -231,13 +260,17 @@ export default function App() {
     setIsConfirmOpen(true);
   }
 
-  function handleExport() {
+  async function handleExport() {
     if (!loadedImage || !preparedImage || !layoutState.plan || !layoutState.layout) return;
 
     setIsExporting(true);
     try {
+      // 무거운 캔버스 작업 전에 한 프레임 양보해 'PDF 생성 중' 상태가 화면에 그려지게 한다.
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => setTimeout(resolve, 0)),
+      );
       const activeWindow = getActivePageWindow(layoutState.plan, layoutState.layout.slices);
-      exportPosterPdf({
+      await exportPosterPdf({
         image: preparedImage.source,
         plan: layoutState.plan,
         layout: layoutState.layout,
@@ -390,18 +423,23 @@ export default function App() {
 
           {settings.mode === 'manual' ? (
           <>
-            <label className="field">
-              <span>A4 방향</span>
-              <select
-                value={settings.orientation}
-                onChange={(event) =>
-                  updateSetting('orientation', event.target.value as Orientation)
-                }
+            <fieldset className="segmented">
+              <legend>A4 방향</legend>
+              <button
+                type="button"
+                className={settings.orientation === 'portrait' ? 'active' : ''}
+                onClick={() => updateSetting('orientation', 'portrait')}
               >
-                <option value="portrait">세로</option>
-                <option value="landscape">가로</option>
-              </select>
-            </label>
+                세로
+              </button>
+              <button
+                type="button"
+                className={settings.orientation === 'landscape' ? 'active' : ''}
+                onClick={() => updateSetting('orientation', 'landscape')}
+              >
+                가로
+              </button>
+            </fieldset>
             <div className="field-grid">
               <NumberField
                 label="행"
@@ -604,15 +642,6 @@ export default function App() {
           targetSize={layoutState.targetSize}
           error={layoutState.error}
         />
-
-        <button
-          type="button"
-          className="export-button"
-          disabled={!loadedImage || !layoutState.plan || !layoutState.layout || isExporting}
-          onClick={handleRequestExport}
-        >
-          {isExporting ? 'PDF 생성 중' : 'PDF 내보내기'}
-        </button>
         <button
           type="button"
           className="secondary-button qa-export-button"
@@ -667,6 +696,21 @@ export default function App() {
                 cropDragRef.current = null;
               }}
             />
+            <div
+              ref={exportNavRef}
+              className="preview-export-nav"
+              style={exportNavPosition}
+              aria-label="PDF 내보내기"
+            >
+              <button
+                type="button"
+                className="export-button"
+                disabled={!loadedImage || !layoutState.plan || !layoutState.layout || isExporting}
+                onClick={handleRequestExport}
+              >
+                {isExporting ? 'PDF 생성 중' : 'PDF 내보내기'}
+              </button>
+            </div>
           </>
         ) : (
           <div className="empty-preview">
@@ -680,6 +724,7 @@ export default function App() {
           plan={layoutState.plan}
           layout={layoutState.layout}
           settings={settings}
+          imageSize={preparedImage?.size}
           onCancel={() => setIsConfirmOpen(false)}
           onConfirm={handleExport}
           isExporting={isExporting}
@@ -817,6 +862,7 @@ function ExportConfirmModal({
   plan,
   layout,
   settings,
+  imageSize,
   onCancel,
   onConfirm,
   isExporting,
@@ -824,10 +870,18 @@ function ExportConfirmModal({
   plan: GridPlan;
   layout: PosterLayout;
   settings: Settings;
+  imageSize?: { widthPx: number; heightPx: number };
   onCancel: () => void;
   onConfirm: () => void;
   isExporting: boolean;
 }) {
+  const usedRatio =
+    imageSize && layout.fitMode === 'cover'
+      ? (layout.sourceWidth * layout.sourceHeight) /
+        (imageSize.widthPx * imageSize.heightPx)
+      : 1;
+  const usedPercent = Math.round(usedRatio * 100);
+
   return (
     <div className="modal-backdrop" role="presentation">
       <section className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="export-title">
@@ -874,9 +928,24 @@ function ExportConfirmModal({
             <dd>{settings.printerMarginMm > 0 ? `${settings.printerMarginMm}mm` : '없음'}</dd>
           </div>
         </dl>
+        {usedPercent < 100 ? (
+          <p className="modal-warning">
+            빈칸 없이 채우기로 인해 원본 이미지의 약 {usedPercent}%만 사용됩니다
+            {usedPercent < 80
+              ? '. 잘리는 부분이 많습니다. 잘림을 줄이려면 행/열 비율을 이미지에 맞추거나 이미지 안 자르기를 선택하세요'
+              : ''}
+            .
+          </p>
+        ) : null}
         <p className="modal-warning">
           인쇄 창에서 실제 크기 또는 100%를 선택하고, 용지에 맞춤은 꺼야 완성 크기가 유지됩니다.
         </p>
+        {settings.printerMarginMm <= 0 ? (
+          <p className="modal-warning">
+            여백 설정이 없음입니다. 대부분의 프린터는 종이 가장자리 3~5mm를 인쇄하지 못해
+            이미지 가장자리가 잘릴 수 있습니다. 잘림이 발생하면 여백을 3mm 이상으로 설정해주세요.
+          </p>
+        ) : null}
         <div className="modal-actions">
           <button type="button" className="secondary-button" onClick={onCancel}>
             다시 확인하기
@@ -1224,20 +1293,6 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function mapPreviewPointToLogical(plan: GridPlan, previewXmm: number, previewYmm: number) {
-  const column = clamp(Math.floor(previewXmm / plan.page.widthMm), 0, plan.columns - 1);
-  const row = clamp(Math.floor(previewYmm / plan.page.heightMm), 0, plan.rows - 1);
-  const printableWidth = plan.page.widthMm - plan.printerMarginMm * 2;
-  const printableHeight = plan.page.heightMm - plan.printerMarginMm * 2;
-  const localX = previewXmm - column * plan.page.widthMm - plan.printerMarginMm;
-  const localY = previewYmm - row * plan.page.heightMm - plan.printerMarginMm;
-
-  return {
-    x: column * (printableWidth - plan.overlapMm) + localX,
-    y: row * (printableHeight - plan.overlapMm) + localY,
-  };
-}
-
 function normalizeNumberDraft(value: string) {
   const cleaned = value.replace(/[^\d.]/g, '');
   if (cleaned === '') return '';
@@ -1265,7 +1320,8 @@ function downloadTextFile(filename: string, text: string, type: string) {
 }
 
 function createRotatedImageSource(image: HTMLImageElement, rotationDeg: number) {
-  const rotation = normalizeRotation(rotationDeg);
+  // 캔버스 크기 계산이 90도 단위를 전제로 하므로 가장 가까운 90도 값으로 맞춘다.
+  const rotation = normalizeRotation(Math.round(rotationDeg / 90) * 90);
   const sourceWidth = image.naturalWidth;
   const sourceHeight = image.naturalHeight;
 

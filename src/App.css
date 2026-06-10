@@ -519,6 +519,25 @@ button:disabled {
   cursor: grabbing;
 }
 
+.preview-export-nav {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 2;
+  display: grid;
+  gap: 8px;
+  width: min(260px, calc(100% - 24px));
+  padding: 10px;
+  border: 1px solid #d8dcd3;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 28px rgba(31, 41, 51, 0.14);
+}
+
+.preview-export-nav .export-button {
+  width: 100%;
+}
+
 .empty-preview {
   display: flex;
   flex-direction: column;
@@ -658,6 +677,12 @@ button:disabled {
     order: 2;
     max-height: calc(100dvh - 250px);
     object-fit: contain;
+  }
+
+  .preview-export-nav {
+    position: static;
+    order: 3;
+    width: 100%;
   }
 
   .preview-canvas.is-draggable {

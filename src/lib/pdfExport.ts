@@ -19,7 +19,7 @@ export interface PdfExportOptions {
   filename?: string;
 }
 
-export function exportPosterPdf(options: PdfExportOptions) {
+export async function exportPosterPdf(options: PdfExportOptions) {
   const pdf = new jsPDF({
     orientation: options.plan.orientation,
     unit: 'mm',
@@ -31,7 +31,8 @@ export function exportPosterPdf(options: PdfExportOptions) {
     throw new Error('Canvas를 사용할 수 없습니다.');
   }
 
-  options.layout.slices.forEach((slice, index) => {
+  for (let index = 0; index < options.layout.slices.length; index += 1) {
+    const slice = options.layout.slices[index];
     if (index > 0) {
       pdf.addPage('a4', options.plan.orientation);
     }
@@ -39,7 +40,9 @@ export function exportPosterPdf(options: PdfExportOptions) {
     const sliceRect = alignedSliceRect(slice, options.dpi);
     scratch.width = sliceRect.width;
     scratch.height = sliceRect.height;
-    context.clearRect(0, 0, scratch.width, scratch.height);
+    // JPEG는 알파 채널이 없으므로 투명 영역이 검게 변하지 않도록 흰색으로 채운다.
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, scratch.width, scratch.height);
     context.drawImage(
       options.image,
       slice.sourceX,
@@ -82,9 +85,22 @@ export function exportPosterPdf(options: PdfExportOptions) {
       pdf.setTextColor(35, 45, 57);
       pdf.text(slice.labelText, slice.labelXmm, slice.labelYmm);
     }
-  });
+
+    // 페이지 사이마다 브라우저에 제어권을 넘겨 진행 표시(isExporting)가 렌더링되도록 한다.
+    await yieldToBrowser();
+  }
 
   pdf.save(options.filename ?? 'image-splitter.pdf');
+}
+
+function yieldToBrowser() {
+  return new Promise<void>((resolve) => {
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => resolve());
+      return;
+    }
+    setTimeout(resolve, 0);
+  });
 }
 
 export function mmToPixels(mm: number, dpi: number) {
