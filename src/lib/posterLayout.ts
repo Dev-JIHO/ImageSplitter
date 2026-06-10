@@ -1,4 +1,4 @@
-import type { GridPlan } from './geometry';
+import { isUniformTabsActive, type GridPlan } from './geometry';
 
 export type FitMode = 'cover' | 'fit';
 
@@ -40,6 +40,48 @@ export interface PageSlice {
   labelYmm: number;
   /** 풀칠 탭이 없어 라벨을 이미지 위에 옅게 표시해야 하는 경우 */
   labelSubtle: boolean;
+}
+
+export interface PageTabs {
+  left: boolean;
+  right: boolean;
+  top: boolean;
+  bottom: boolean;
+}
+
+/**
+ * 페이지별 풀칠 탭 소유권.
+ *
+ * 기본 방식: 세로 이음새는 왼쪽 페이지, 가로 이음새는 위 페이지가 탭을
+ * 갖는다 (마지막 행+열 페이지는 탭 없음).
+ *
+ * 균일 예약 방식(uniformTabs): 모든 페이지가 (인쇄폭-풀칠폭)x(인쇄높이-풀칠폭)
+ * 크기로 통일되어 탭 방향을 자유롭게 배정할 수 있다. 배정 규칙:
+ *  - 세로 이음새: 첫 행은 왼쪽 페이지(오른쪽 탭), 나머지 행은 오른쪽 페이지(왼쪽 탭)
+ *  - 가로 이음새: 첫 열은 아래 페이지(위 탭), 나머지 열은 위 페이지(아래 탭)
+ * 이 규칙으로 2x2 이상 모든 격자에서 전 페이지가 최소 1개의 탭을 가지며,
+ * 이미지가 완전한 직사각 격자로 타일링되므로 빈 구멍이 생기지 않는다.
+ */
+export function getPageTabs(plan: GridPlan, row: number, column: number): PageTabs {
+  if (plan.overlapMm <= 0) {
+    return { left: false, right: false, top: false, bottom: false };
+  }
+
+  if (isUniformTabsActive(plan)) {
+    return {
+      right: row === 0 && column < plan.columns - 1,
+      left: row > 0 && column > 0,
+      bottom: column > 0 && row < plan.rows - 1,
+      top: column === 0 && row > 0,
+    };
+  }
+
+  return {
+    left: false,
+    top: false,
+    right: column < plan.columns - 1,
+    bottom: row < plan.rows - 1,
+  };
 }
 
 export interface GlueMark {
@@ -266,8 +308,22 @@ export function getGlueMarks(plan: GridPlan, slices?: PageSlice[]): GlueMark[] {
   if (slices) {
     return slices.flatMap((slice) => {
       const marks: GlueMark[] = [];
+      const tabs = getPageTabs(plan, slice.row, slice.column);
+      const push = (xMm: number, yMm: number, widthMm: number, heightMm: number) => {
+        if (widthMm <= 0 || heightMm <= 0) return;
+        marks.push({
+          row: slice.row,
+          column: slice.column,
+          xMm,
+          yMm,
+          widthMm,
+          heightMm,
+          previewXmm: slice.column * plan.page.widthMm + xMm,
+          previewYmm: slice.row * plan.page.heightMm + yMm,
+        });
+      };
 
-      if (slice.column < plan.columns - 1) {
+      if (tabs.right) {
         const widthMm = Math.min(plan.overlapMm, slice.destWidthMm);
         const xMm = clamp(
           slice.destXmm + slice.destWidthMm,
@@ -275,19 +331,17 @@ export function getGlueMarks(plan: GridPlan, slices?: PageSlice[]): GlueMark[] {
           plan.page.widthMm - widthMm,
         );
         const yMm = clamp(slice.destYmm, 0, plan.page.heightMm);
-        marks.push({
-          row: slice.row,
-          column: slice.column,
-          xMm,
-          yMm,
-          widthMm,
-          heightMm: Math.min(slice.destHeightMm, plan.page.heightMm - yMm),
-          previewXmm: slice.column * plan.page.widthMm + xMm,
-          previewYmm: slice.row * plan.page.heightMm + yMm,
-        });
+        push(xMm, yMm, widthMm, Math.min(slice.destHeightMm, plan.page.heightMm - yMm));
       }
 
-      if (slice.row < plan.rows - 1) {
+      if (tabs.left) {
+        const widthMm = Math.min(plan.overlapMm, slice.destXmm);
+        const xMm = clamp(slice.destXmm - widthMm, 0, plan.page.widthMm);
+        const yMm = clamp(slice.destYmm, 0, plan.page.heightMm);
+        push(xMm, yMm, widthMm, Math.min(slice.destHeightMm, plan.page.heightMm - yMm));
+      }
+
+      if (tabs.bottom) {
         const heightMm = Math.min(plan.overlapMm, slice.destHeightMm);
         const xMm = clamp(slice.destXmm, 0, plan.page.widthMm);
         const yMm = clamp(
@@ -295,16 +349,14 @@ export function getGlueMarks(plan: GridPlan, slices?: PageSlice[]): GlueMark[] {
           0,
           plan.page.heightMm - heightMm,
         );
-        marks.push({
-          row: slice.row,
-          column: slice.column,
-          xMm,
-          yMm,
-          widthMm: Math.min(slice.destWidthMm, plan.page.widthMm - xMm),
-          heightMm,
-          previewXmm: slice.column * plan.page.widthMm + xMm,
-          previewYmm: slice.row * plan.page.heightMm + yMm,
-        });
+        push(xMm, yMm, Math.min(slice.destWidthMm, plan.page.widthMm - xMm), heightMm);
+      }
+
+      if (tabs.top) {
+        const heightMm = Math.min(plan.overlapMm, slice.destYmm);
+        const xMm = clamp(slice.destXmm, 0, plan.page.widthMm);
+        const yMm = clamp(slice.destYmm - heightMm, 0, plan.page.heightMm);
+        push(xMm, yMm, Math.min(slice.destWidthMm, plan.page.widthMm - xMm), heightMm);
       }
 
       return marks;
@@ -413,8 +465,14 @@ function createPageSlices(
       const pageY = row * plan.page.heightMm;
       const printableWidth = plan.page.widthMm - plan.printerMarginMm * 2;
       const printableHeight = plan.page.heightMm - plan.printerMarginMm * 2;
-      const imageWidth = printableWidth - (column < plan.columns - 1 ? plan.overlapMm : 0);
-      const imageHeight = printableHeight - (row < plan.rows - 1 ? plan.overlapMm : 0);
+      const uniform = isUniformTabsActive(plan);
+      const tabs = getPageTabs(plan, row, column);
+      const imageWidth = uniform
+        ? printableWidth - plan.overlapMm
+        : printableWidth - (column < plan.columns - 1 ? plan.overlapMm : 0);
+      const imageHeight = uniform
+        ? printableHeight - plan.overlapMm
+        : printableHeight - (row < plan.rows - 1 ? plan.overlapMm : 0);
       const logicalPage: RectMm = {
         x: column * (printableWidth - plan.overlapMm),
         y: row * (printableHeight - plan.overlapMm),
@@ -427,8 +485,10 @@ function createPageSlices(
       const source = mapFrameToSource(visible, imageFrameMm, sourceRect);
       const localX = visible.x - logicalPage.x;
       const localY = visible.y - logicalPage.y;
-      const destXmm = plan.printerMarginMm + localX;
-      const destYmm = plan.printerMarginMm + localY;
+      const destXmm =
+        plan.printerMarginMm + (tabs.left ? plan.overlapMm : 0) + localX;
+      const destYmm =
+        plan.printerMarginMm + (tabs.top ? plan.overlapMm : 0) + localY;
       const label = createPageLabel(plan, {
         x: destXmm,
         y: destYmm,

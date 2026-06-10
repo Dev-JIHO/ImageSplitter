@@ -53,6 +53,8 @@ interface Settings {
   targetWidthMm: number;
   targetHeightMm: number;
   overlapMm: number;
+  /** 모든 장에 풀칠 탭 만들기 (균일 예약 방식) */
+  uniformTabs: boolean;
   printerMarginMm: number;
   exportDpi: number;
   /** 접합 테스트 100mm 사각형의 실측값 (인쇄 배율 보정용) */
@@ -75,6 +77,7 @@ const initialSettings: Settings = {
   targetWidthMm: 420,
   targetHeightMm: 594,
   overlapMm: 10,
+  uniformTabs: false,
   // 일반 프린터는 가장자리 3~5mm를 인쇄하지 못하므로 안전한 5mm를 기본값으로 한다.
   printerMarginMm: 5,
   exportDpi: 200,
@@ -149,6 +152,7 @@ export default function App() {
             targetHeightMm: targetSize.heightMm,
             overlapMm: settings.overlapMm,
             printerMarginMm: settings.printerMarginMm,
+            uniformTabs: settings.uniformTabs,
           })
         : createManualGridPlan({
             orientation: settings.orientation,
@@ -156,6 +160,7 @@ export default function App() {
             columns: settings.columns,
             overlapMm: settings.overlapMm,
             printerMarginMm: settings.printerMarginMm,
+            uniformTabs: settings.uniformTabs,
           });
       const layout = createPosterLayout(plan, {
         image: preparedImage.size,
@@ -616,6 +621,19 @@ export default function App() {
         </div>
         <p className="hint-text">
           이어붙일 가장자리에 남길 빈 탭 크기입니다. 0mm로 두면 풀칠 탭 없이 이미지만 나뉩니다.
+        </p>
+        <label className="check-field">
+          <input
+            type="checkbox"
+            checked={settings.uniformTabs}
+            onChange={(event) => updateSetting('uniformTabs', event.target.checked)}
+          />
+          <span>모든 장에 풀칠 탭 만들기</span>
+        </label>
+        <p className="hint-text">
+          마지막 장에도 풀칠 탭이 생겨 페이지 번호가 이미지 위에 올라가지 않습니다.
+          대신 완성 크기가 가로·세로 각각 풀칠 영역만큼 작아집니다. 2행 2열 이상에서
+          적용됩니다.
         </p>
 
         <details className="options-group">

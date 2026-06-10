@@ -12,6 +12,8 @@ export interface ManualGridInput {
   marginMm?: number;
   overlapMm: number;
   printerMarginMm?: number;
+  /** 모든 장에 풀칠 탭 만들기 (균일 예약 방식) */
+  uniformTabs?: boolean;
 }
 
 export interface TargetSizeInput {
@@ -20,6 +22,8 @@ export interface TargetSizeInput {
   marginMm?: number;
   overlapMm: number;
   printerMarginMm?: number;
+  /** 모든 장에 풀칠 탭 만들기 (균일 예약 방식) */
+  uniformTabs?: boolean;
 }
 
 export interface GridPlan {
@@ -35,6 +39,18 @@ export interface GridPlan {
   marginMm: number;
   overlapMm: number;
   printerMarginMm: number;
+  uniformTabs: boolean;
+}
+
+/**
+ * 균일 예약 방식이 실제로 적용되는지 여부.
+ * 1xN/Nx1 격자는 이음새 수가 페이지 수보다 적어 모든 페이지에 탭을 줄 수
+ * 없으므로(비둘기집 원리) 2x2 이상에서만 적용한다.
+ */
+export function isUniformTabsActive(
+  plan: Pick<GridPlan, 'uniformTabs' | 'rows' | 'columns' | 'overlapMm'>,
+): boolean {
+  return plan.uniformTabs && plan.rows >= 2 && plan.columns >= 2 && plan.overlapMm > 0;
 }
 
 const A4: Record<Orientation, PageSize> = {
@@ -57,10 +73,17 @@ export function createManualGridPlan(input: ManualGridInput): GridPlan {
   const totalHeightMm = page.heightMm * input.rows;
   const printableWidthMm = page.widthMm - printerMarginMm * 2;
   const printableHeightMm = page.heightMm - printerMarginMm * 2;
-  const contentWidthMm =
-    printableWidthMm + (input.columns - 1) * (printableWidthMm - input.overlapMm);
-  const contentHeightMm =
-    printableHeightMm + (input.rows - 1) * (printableHeightMm - input.overlapMm);
+  const uniformTabs = input.uniformTabs ?? false;
+  const uniformActive =
+    uniformTabs && input.rows >= 2 && input.columns >= 2 && input.overlapMm > 0;
+  // 균일 예약 방식: 모든 페이지가 가로·세로 각각 풀칠폭만큼 공간을 예약하므로
+  // 콘텐츠가 페이지당 (인쇄폭 - 풀칠폭)으로 일정하다.
+  const contentWidthMm = uniformActive
+    ? input.columns * (printableWidthMm - input.overlapMm)
+    : printableWidthMm + (input.columns - 1) * (printableWidthMm - input.overlapMm);
+  const contentHeightMm = uniformActive
+    ? input.rows * (printableHeightMm - input.overlapMm)
+    : printableHeightMm + (input.rows - 1) * (printableHeightMm - input.overlapMm);
 
   if (contentWidthMm <= 0 || contentHeightMm <= 0) {
     throw new Error('Margin is too large for the selected grid.');
@@ -79,6 +102,7 @@ export function createManualGridPlan(input: ManualGridInput): GridPlan {
     marginMm: 0,
     overlapMm: input.overlapMm,
     printerMarginMm,
+    uniformTabs,
   };
 }
 
@@ -130,14 +154,20 @@ function createTargetCandidates(
   const maxRows = Math.max(1, Math.ceil(input.targetHeightMm / printableHeightMm) + 2);
   const candidates: GridPlan[] = [];
 
+  const uniformTabs = input.uniformTabs ?? false;
+
   for (let rows = 1; rows <= maxRows; rows += 1) {
     for (let columns = 1; columns <= maxColumns; columns += 1) {
       const totalWidthMm = page.widthMm * columns;
       const totalHeightMm = page.heightMm * rows;
-      const contentWidthMm =
-        printableWidthMm + (columns - 1) * (printableWidthMm - input.overlapMm);
-      const contentHeightMm =
-        printableHeightMm + (rows - 1) * (printableHeightMm - input.overlapMm);
+      const uniformActive =
+        uniformTabs && rows >= 2 && columns >= 2 && input.overlapMm > 0;
+      const contentWidthMm = uniformActive
+        ? columns * (printableWidthMm - input.overlapMm)
+        : printableWidthMm + (columns - 1) * (printableWidthMm - input.overlapMm);
+      const contentHeightMm = uniformActive
+        ? rows * (printableHeightMm - input.overlapMm)
+        : printableHeightMm + (rows - 1) * (printableHeightMm - input.overlapMm);
 
       if (
         contentWidthMm >= input.targetWidthMm &&
@@ -156,6 +186,7 @@ function createTargetCandidates(
           marginMm: 0,
           overlapMm: input.overlapMm,
           printerMarginMm,
+          uniformTabs,
         });
       }
     }

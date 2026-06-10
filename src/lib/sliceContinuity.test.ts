@@ -23,6 +23,7 @@ interface Case {
   fitMode: FitMode;
   cropFocus?: CropFocus;
   imageScale?: number;
+  uniformTabs?: boolean;
 }
 
 function verifyContinuity(c: Case) {
@@ -32,6 +33,7 @@ function verifyContinuity(c: Case) {
     columns: c.columns,
     overlapMm: c.overlapMm,
     printerMarginMm: c.printerMarginMm,
+    uniformTabs: c.uniformTabs,
   });
   const layout = createPosterLayout(plan, {
     image: { widthPx: c.imageWidthPx, heightPx: c.imageHeightPx },
@@ -146,29 +148,33 @@ describe('slice continuity (이미지 잘림 회귀)', () => {
       grids.forEach(([rows, columns]) => {
         [0, 10, 20].forEach((overlapMm) => {
           [0, 3, 5].forEach((printerMarginMm) => {
-            focuses.forEach((cropFocus) => {
-              [1, 1.37, 2].forEach((imageScale) => {
-                verifyContinuity({
-                  imageWidthPx,
-                  imageHeightPx,
-                  rows,
-                  columns,
-                  overlapMm,
-                  printerMarginMm,
-                  fitMode: 'cover',
-                  cropFocus,
-                  imageScale,
+            [false, true].forEach((uniformTabs) => {
+              focuses.forEach((cropFocus) => {
+                [1, 1.37, 2].forEach((imageScale) => {
+                  verifyContinuity({
+                    imageWidthPx,
+                    imageHeightPx,
+                    rows,
+                    columns,
+                    overlapMm,
+                    printerMarginMm,
+                    fitMode: 'cover',
+                    cropFocus,
+                    imageScale,
+                    uniformTabs,
+                  });
                 });
               });
-            });
-            verifyContinuity({
-              imageWidthPx,
-              imageHeightPx,
-              rows,
-              columns,
-              overlapMm,
-              printerMarginMm,
-              fitMode: 'fit',
+              verifyContinuity({
+                imageWidthPx,
+                imageHeightPx,
+                rows,
+                columns,
+                overlapMm,
+                printerMarginMm,
+                fitMode: 'fit',
+                uniformTabs,
+              });
             });
           });
         });
