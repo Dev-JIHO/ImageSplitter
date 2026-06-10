@@ -73,7 +73,8 @@ const initialSettings: Settings = {
   targetWidthMm: 420,
   targetHeightMm: 594,
   overlapMm: 10,
-  printerMarginMm: 0,
+  // 일반 프린터는 가장자리 3~5mm를 인쇄하지 못하므로 안전한 5mm를 기본값으로 한다.
+  printerMarginMm: 5,
   exportDpi: 200,
   rotationDeg: 0,
   imageScale: 1,
@@ -564,14 +565,14 @@ export default function App() {
 
         <fieldset className="segmented segmented-three">
           <legend>여백 설정</legend>
-          {[0, 3, 5].map((margin) => (
+          {[5, 3, 0].map((margin) => (
             <button
               key={margin}
               type="button"
               className={settings.printerMarginMm === margin ? 'active' : ''}
               onClick={() => updateSetting('printerMarginMm', margin)}
             >
-              {margin === 0 ? '없음' : `${margin}mm`}
+              {margin === 0 ? '없음(전체인쇄용)' : `${margin}mm${margin === 5 ? ' (권장)' : ''}`}
             </button>
           ))}
         </fieldset>
@@ -585,6 +586,13 @@ export default function App() {
         <p className="hint-text">
           프린터가 종이 가장자리에 인쇄하지 못하는 영역입니다. 일반 프린터는 3~5mm를 권장합니다.
         </p>
+        {settings.printerMarginMm <= 0 ? (
+          <p className="warning-text" role="alert">
+            여백이 없으면 일반 프린터에서는 가장자리 3~5mm가 잘린 채 인쇄됩니다. 테두리
+            없는 인쇄(전체 인쇄)를 지원하는 프린터에서만 사용하세요. 잘 모르겠다면 5mm를
+            선택해주세요.
+          </p>
+        ) : null}
 
         <fieldset className="segmented segmented-three">
           <legend>출력 해상도</legend>
