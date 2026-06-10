@@ -13,10 +13,6 @@ import { loadImageFile, type LoadedImage } from './lib/imageLoader';
 import { exportPosterPdf } from './lib/pdfExport';
 import { exportSeamTestPdf } from './lib/seamTestPdf';
 import {
-  createQaSettingsFilename,
-  createQaSettingsSnapshot,
-} from './lib/qaSettingsExport';
-import {
   calculatePreviewToolbarPosition,
   type ToolbarPosition,
 } from './lib/previewToolbar';
@@ -44,7 +40,7 @@ import {
 } from './lib/targetSize';
 
 type SizingMode = 'manual' | 'target';
-type MobilePanel = 'image' | 'size' | 'print' | 'preview';
+type MobilePanel = 'settings' | 'preview';
 
 interface Settings {
   mode: SizingMode;
@@ -92,7 +88,6 @@ const initialSettings: Settings = {
 
 const supportedImageAccept = 'image/jpeg,image/png,image/webp,image/gif,image/avif';
 const supportedImageText = 'JPG, PNG, WebP, GIF, AVIF 지원';
-const appVersion = '0.1.0';
 
 export default function App() {
   const [settings, setSettings] = useState<Settings>(initialSettings);
@@ -101,7 +96,8 @@ export default function App() {
   const [isExporting, setIsExporting] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
-  const [activeMobilePanel, setActiveMobilePanel] = useState<MobilePanel>('image');
+  const [hasSeamTestExported, setHasSeamTestExported] = useState(false);
+  const [activeMobilePanel, setActiveMobilePanel] = useState<MobilePanel>('settings');
   const [toolbarPosition, setToolbarPosition] = useState<ToolbarPosition>({
     top: 12,
     right: 12,
@@ -284,8 +280,8 @@ export default function App() {
     try {
       const nextImage = await loadImageFile(file);
       setLoadedImage(nextImage);
-      // 모바일: 이미지를 올리면 자연스럽게 다음 단계로 이동
-      setActiveMobilePanel((panel) => (panel === 'image' ? 'size' : panel));
+      // 모바일: 이미지를 올리면 바로 미리보기를 보여준다
+      setActiveMobilePanel('preview');
       setSettings((current) => ({
         ...current,
         rotationDeg: 0,
@@ -343,37 +339,8 @@ export default function App() {
     }
   }
 
-  function handleExportQaSettings() {
-    if (!loadedImage || !preparedImage || !layoutState.plan || !layoutState.layout) return;
-
-    const activeWindow = getActivePageWindow(layoutState.plan, layoutState.layout.slices);
-    const snapshot = createQaSettingsSnapshot({
-      appVersion,
-      exportedAt: new Date().toISOString(),
-      originalName: loadedImage.name,
-      imageSize: preparedImage.size,
-      settings: { ...settings },
-      plan: layoutState.plan,
-      layout: layoutState.layout,
-      activeWindow,
-      targetSize: layoutState.targetSize,
-      previewCanvas: canvasRef.current
-        ? {
-            widthPx: canvasRef.current.width,
-            heightPx: canvasRef.current.height,
-          }
-        : undefined,
-      userAgent: window.navigator.userAgent,
-    });
-
-    downloadTextFile(
-      createQaSettingsFilename(loadedImage.name),
-      JSON.stringify(snapshot, null, 2),
-      'application/json',
-    );
-  }
-
   function handleExportSeamTest() {
+    setHasSeamTestExported(true);
     exportSeamTestPdf({
       orientation: layoutState.plan?.orientation ?? settings.orientation,
       overlapMm: settings.overlapMm,
@@ -409,58 +376,91 @@ export default function App() {
         data-mobile-active={activeMobilePanel !== 'preview'}
         aria-label="분할 설정"
       >
-        <div className="mobile-section" data-mobile-active={activeMobilePanel === 'image'}>
-          <div className="title-block">
-            <h1>A4 이미지 분할</h1>
-            <p>큰 이미지를 여러 장의 A4로 나누어 인쇄용 PDF를 만듭니다.</p>
-          </div>
+        <div className="title-block">
+          <h1>A4 이미지 분할</h1>
+          <p>큰 이미지를 여러 장의 A4로 나누어 인쇄용 PDF를 만듭니다.</p>
+        </div>
 
-          <div className="step-heading">
-            <span className={loadedImage ? 'done' : ''}>{loadedImage ? '✓' : '1'}</span>
-            <strong>이미지 선택</strong>
+        <details className="options-group seam-test-group">
+          <summary>시작 전에 프린터 테스트하기 (선택 · 권장)</summary>
+          <div className="options-group-body">
+            <p className="hint-text">
+              포스터를 만들기 전에 A4 2장을 인쇄해 붙여보고, 크기가 정확한지(100mm
+              사각형)와 이음새가 매끄럽게 이어지는지(눈금·원·사선)를 확인할 수
+              있습니다. 이미지가 없어도 만들 수 있습니다.
+            </p>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={handleExportSeamTest}
+            >
+              접합 테스트 PDF 받기 (A4 2장)
+            </button>
+            {hasSeamTestExported || settings.measuredSquareMm !== 100 ? (
+              <>
+                <NumberField
+                  label="테스트 사각형 실측값(mm)"
+                  value={settings.measuredSquareMm}
+                  min={50}
+                  step={0.5}
+                  onChange={(value) => updateSetting('measuredSquareMm', value)}
+                />
+                <p className="hint-text">
+                  인쇄된 100mm 사각형이 실제 몇 mm인지 자로 재서 입력하세요. 배율을
+                  조절할 수 없는 인쇄 앱(예: Epson Smart Panel)에서도 실제 크기에 맞게
+                  PDF를 보정합니다. 정확히 100mm라면 100을 그대로 두세요.
+                </p>
+              </>
+            ) : (
+              <p className="hint-text">
+                테스트를 인쇄한 뒤 다시 이곳에 오면, 측정값을 입력해 인쇄 크기를 보정할
+                수 있습니다.
+              </p>
+            )}
+            {printScale.factor !== 1 ? (
+              <p className="print-note">
+                인쇄 배율 보정 {Math.round(printScale.factor * 1000) / 10}%가 모든 PDF에
+                적용됩니다. 보정 후 접합 테스트를 다시 인쇄해 100mm가 맞는지 확인하세요.
+              </p>
+            ) : null}
+            {printScale.clamped ? (
+              <p className="warning-text" role="alert">
+                여백이 작아 필요한 보정 배율(
+                {Math.round(printScale.requestedFactor * 1000) / 10}%)을 전부 적용할 수
+                없습니다. 여백을 늘리면 더 정확하게 보정됩니다.
+              </p>
+            ) : null}
           </div>
-          <label
-            className={`upload-drop-zone ${isDraggingFile ? 'is-dragging' : ''}`}
-            onDragEnter={(event) => {
-              event.preventDefault();
-              setIsDraggingFile(true);
-            }}
-            onDragOver={(event) => {
-              event.preventDefault();
-            }}
-            onDragLeave={(event) => {
-              event.preventDefault();
-              if (event.currentTarget === event.target) {
-                setIsDraggingFile(false);
-              }
-            }}
-            onDrop={(event) => {
-              event.preventDefault();
-              setIsDraggingFile(false);
-              handleFileChange(event.dataTransfer.files[0]);
-            }}
-          >
-            <strong>
-              {loadedImage ? loadedImage.name : '이미지를 끌어오거나 클릭해서 선택'}
-            </strong>
-            <span>여러 장의 A4로 나눌 사진 파일을 넣어주세요.</span>
-            <small>{supportedImageText}</small>
+        </details>
+
+        <div className="step-heading">
+          <span className={loadedImage ? 'done' : ''}>{loadedImage ? '✓' : '1'}</span>
+          <strong>이미지 선택</strong>
+        </div>
+        <div className="upload-row">
+          <label className="upload-button">
+            사진 선택
             <input
               type="file"
               accept={supportedImageAccept}
               onChange={(event) => handleFileChange(event.target.files?.[0])}
             />
           </label>
-          {imageError ? <p className="error-text">{imageError}</p> : null}
+          <span className="upload-filename" title={loadedImage?.name}>
+            {loadedImage ? loadedImage.name : '선택된 사진 없음'}
+          </span>
         </div>
+        <p className="hint-text">
+          오른쪽 미리보기 영역에 사진을 끌어다 놓아도 됩니다. {supportedImageText}.
+        </p>
+        {imageError ? <p className="error-text">{imageError}</p> : null}
 
-        <div className="mobile-section" data-mobile-active={activeMobilePanel === 'size'}>
-          <div className="step-heading">
-            <span className={loadedImage && !layoutState.error ? 'done' : ''}>
-              {loadedImage && !layoutState.error ? '✓' : '2'}
-            </span>
-            <strong>크기 정하기</strong>
-          </div>
+        <div className="step-heading">
+          <span className={loadedImage && !layoutState.error ? 'done' : ''}>
+            {loadedImage && !layoutState.error ? '✓' : '2'}
+          </span>
+          <strong>포스터 설정</strong>
+        </div>
           <fieldset className="segmented">
             <legend>어떻게 크게 만들까요?</legend>
             <button
@@ -579,13 +579,7 @@ export default function App() {
             </div>
           </>
           )}
-        </div>
 
-        <div className="mobile-section" data-mobile-active={activeMobilePanel === 'print'}>
-          <div className="step-heading">
-            <span>3</span>
-            <strong>인쇄 설정</strong>
-          </div>
           <fieldset className="segmented">
             <legend>이미지 배치</legend>
             <button
@@ -623,6 +617,9 @@ export default function App() {
           이어붙일 가장자리에 남길 빈 탭 크기입니다. 0mm로 두면 풀칠 탭 없이 이미지만 나뉩니다.
         </p>
 
+        <details className="options-group">
+          <summary>인쇄 옵션 (여백 · 해상도 · 표시 항목)</summary>
+          <div className="options-group-body">
         <fieldset className="segmented segmented-three">
           <legend>여백 설정</legend>
           {[5, 3, 0].map((margin) => (
@@ -699,50 +696,12 @@ export default function App() {
           />
           <span>풀칠 영역 표시</span>
         </label>
+          </div>
+        </details>
 
         <p className="print-note">
           인쇄 창에서 반드시 실제 크기 또는 100%를 선택하고, 용지에 맞춤은 꺼주세요.
         </p>
-
-        <div className="seam-test-block">
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={handleExportSeamTest}
-          >
-            접합 테스트 PDF 받기 (A4 2장)
-          </button>
-          <p className="hint-text">
-            포스터를 인쇄하기 전에 2장만 인쇄해 붙여보세요. 크기가 정확한지(100mm 기준
-            사각형)와 이음새가 매끄럽게 이어지는지(눈금·원·사선)를 미리 확인할 수
-            있습니다. 이미지 없이도 현재 인쇄 설정으로 만들어집니다.
-          </p>
-          <NumberField
-            label="테스트 사각형 실측값(mm)"
-            value={settings.measuredSquareMm}
-            min={50}
-            step={0.5}
-            onChange={(value) => updateSetting('measuredSquareMm', value)}
-          />
-          <p className="hint-text">
-            테스트의 100mm 사각형이 실제 몇 mm로 인쇄됐는지 입력하세요. 배율을 조절할 수
-            없는 인쇄 앱(예: Epson Smart Panel)에서도 실제 크기에 맞게 PDF를 보정합니다.
-            정확히 100mm로 나왔다면 100을 그대로 두세요.
-          </p>
-          {printScale.factor !== 1 ? (
-            <p className="print-note">
-              인쇄 배율 보정 {Math.round(printScale.factor * 1000) / 10}%가 모든 PDF에
-              적용됩니다. 보정 후 접합 테스트를 다시 인쇄해 100mm가 맞는지 확인하세요.
-            </p>
-          ) : null}
-          {printScale.clamped ? (
-            <p className="warning-text" role="alert">
-              여백이 작아 필요한 보정 배율(
-              {Math.round(printScale.requestedFactor * 1000) / 10}%)을 전부 적용할 수
-              없습니다. 여백을 늘리면 더 정확하게 보정됩니다.
-            </p>
-          ) : null}
-        </div>
 
         <Summary
           plan={layoutState.plan}
@@ -750,23 +709,37 @@ export default function App() {
           targetSize={layoutState.targetSize}
           error={layoutState.error}
         />
-        <button
-          type="button"
-          className="secondary-button qa-export-button"
-          disabled={!loadedImage || !layoutState.plan || !layoutState.layout}
-          onClick={handleExportQaSettings}
-        >
-          QA 세팅 내보내기
-        </button>
-        </div>
       </section>
 
       <section
         ref={previewPanelRef}
-        className="preview-panel"
+        className={`preview-panel ${isDraggingFile ? 'is-dropping' : ''}`}
         data-mobile-active={activeMobilePanel === 'preview'}
         aria-label="분할 미리보기"
+        onDragEnter={(event) => {
+          event.preventDefault();
+          setIsDraggingFile(true);
+        }}
+        onDragOver={(event) => {
+          event.preventDefault();
+        }}
+        onDragLeave={(event) => {
+          event.preventDefault();
+          if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+            setIsDraggingFile(false);
+          }
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          setIsDraggingFile(false);
+          handleFileChange(event.dataTransfer.files[0]);
+        }}
       >
+        {isDraggingFile ? (
+          <div className="drop-overlay" aria-hidden>
+            사진을 여기에 놓으면 불러옵니다
+          </div>
+        ) : null}
         <PreviewLegend />
         {loadedImage && layoutState.plan && layoutState.layout ? (
           <>
@@ -830,14 +803,14 @@ export default function App() {
           </>
         ) : (
           <div className="empty-preview">
-            <strong>이미지를 불러오면 미리보기에서 확인할 수 있습니다.</strong>
+            <strong>사진을 이 영역에 끌어다 놓으면 바로 시작됩니다.</strong>
             <ol className="empty-steps">
-              <li>왼쪽에서 사진 파일을 선택하세요.</li>
+              <li>사진을 여기에 끌어다 놓거나 왼쪽에서 선택하세요.</li>
               <li>A4 장수 또는 완성 크기를 정하세요.</li>
               <li>미리보기를 확인하고 PDF로 내보내세요.</li>
               <li>인쇄한 뒤 1-1부터 번호 순서대로 풀칠해 붙이세요.</li>
             </ol>
-            <span>처음이라면 인쇄 설정의 접합 테스트 PDF로 프린터를 먼저 확인해보세요.</span>
+            <span>처음이라면 왼쪽 위 프린터 테스트로 인쇄 크기를 먼저 확인해보세요.</span>
           </div>
         )}
       </section>
@@ -855,9 +828,7 @@ export default function App() {
       ) : null}
       <nav className="mobile-bottom-nav" aria-label="모바일 단계 이동">
         {[
-          ['image', loadedImage ? '이미지 ✓' : '이미지 선택'],
-          ['size', '크기 정하기'],
-          ['print', '인쇄 설정'],
+          ['settings', loadedImage ? '설정 ✓' : '설정'],
           ['preview', '미리보기'],
         ].map(([panel, label]) => (
           <button
@@ -1453,18 +1424,6 @@ function normalizeNumberDraft(value: string) {
 
 function normalizeRotation(value: number) {
   return ((value % 360) + 360) % 360;
-}
-
-function downloadTextFile(filename: string, text: string, type: string) {
-  const blob = new Blob([text], { type });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
 }
 
 function createRotatedImageSource(image: HTMLImageElement, rotationDeg: number) {
