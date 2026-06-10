@@ -7,6 +7,7 @@ import {
   PAGE_NUMBER_FONT_SIZE_PT,
 } from './renderConstants';
 import { getGlueMarks, type PageSlice, type PosterLayout } from './posterLayout';
+import { scaleAboutPageCenter } from './printScale';
 
 export interface PdfExportOptions {
   image: CanvasImageSource;
@@ -16,6 +17,8 @@ export interface PdfExportOptions {
   showPageNumbers: boolean;
   showPageBoundaries: boolean;
   showGlueMarks: boolean;
+  /** 인쇄 배율 보정 (배율 고정 인쇄 앱 대응, 기본 1) */
+  printScale?: number;
   filename?: string;
 }
 
@@ -30,6 +33,11 @@ export async function exportPosterPdf(options: PdfExportOptions) {
   if (!context) {
     throw new Error('Canvas를 사용할 수 없습니다.');
   }
+
+  // 인쇄 배율 보정: 페이지 중심 기준으로 모든 mm 좌표를 확대/축소
+  const k = options.printScale ?? 1;
+  const sx = (value: number) => scaleAboutPageCenter(value, options.plan.page.widthMm, k);
+  const sy = (value: number) => scaleAboutPageCenter(value, options.plan.page.heightMm, k);
 
   for (let index = 0; index < options.layout.slices.length; index += 1) {
     const slice = options.layout.slices[index];
@@ -59,31 +67,31 @@ export async function exportPosterPdf(options: PdfExportOptions) {
     pdf.addImage(
       dataUrl,
       'JPEG',
-      slice.destXmm,
-      slice.destYmm,
-      slice.destWidthMm,
-      slice.destHeightMm,
+      sx(slice.destXmm),
+      sy(slice.destYmm),
+      slice.destWidthMm * k,
+      slice.destHeightMm * k,
     );
 
     if (options.showPageBoundaries) {
       pdf.setDrawColor(35, 45, 57);
       pdf.setLineWidth(0.2);
       pdf.rect(
-        slice.destXmm,
-        slice.destYmm,
-        slice.destWidthMm,
-        slice.destHeightMm,
+        sx(slice.destXmm),
+        sy(slice.destYmm),
+        slice.destWidthMm * k,
+        slice.destHeightMm * k,
       );
     }
 
     if (options.showGlueMarks) {
-      renderGlueMarksToPdf(pdf, options.plan, slice);
+      renderGlueMarksToPdf(pdf, options.plan, slice, k);
     }
 
     if (options.showPageNumbers) {
-      pdf.setFontSize(PAGE_NUMBER_FONT_SIZE_PT);
+      pdf.setFontSize(PAGE_NUMBER_FONT_SIZE_PT * k);
       pdf.setTextColor(35, 45, 57);
-      pdf.text(slice.labelText, slice.labelXmm, slice.labelYmm);
+      pdf.text(slice.labelText, sx(slice.labelXmm), sy(slice.labelYmm));
     }
 
     // 페이지 사이마다 브라우저에 제어권을 넘겨 진행 표시(isExporting)가 렌더링되도록 한다.
@@ -124,13 +132,25 @@ export function alignedSliceRect(
   };
 }
 
-function renderGlueMarksToPdf(pdf: jsPDF, plan: GridPlan, slice: PageSlice) {
+function renderGlueMarksToPdf(
+  pdf: jsPDF,
+  plan: GridPlan,
+  slice: PageSlice,
+  printScale = 1,
+) {
   getGlueMarks(plan, [slice])
-    .forEach((mark) => {
+    .forEach((rawMark) => {
+      const mark = {
+        xMm: scaleAboutPageCenter(rawMark.xMm, plan.page.widthMm, printScale),
+        yMm: scaleAboutPageCenter(rawMark.yMm, plan.page.heightMm, printScale),
+        widthMm: rawMark.widthMm * printScale,
+        heightMm: rawMark.heightMm * printScale,
+      };
+      const spacing = GLUE_HATCH_SPACING_MM * printScale;
       pdf.setDrawColor(120, 120, 120);
 
       pdf.setLineWidth(GLUE_HATCH_LINE_WIDTH_MM);
-      for (let offset = -mark.heightMm; offset < mark.widthMm; offset += GLUE_HATCH_SPACING_MM) {
+      for (let offset = -mark.heightMm; offset < mark.widthMm; offset += spacing) {
         let x1 = mark.xMm + offset;
         let y1 = mark.yMm;
         let x2 = x1 + mark.heightMm;

@@ -5,6 +5,7 @@ import {
   GLUE_HATCH_SPACING_MM,
   PAGE_NUMBER_FONT_SIZE_PT,
 } from './renderConstants';
+import { scaleAboutPageCenter } from './printScale';
 import {
   createSeamTestLayout,
   type SeamRectMm,
@@ -13,6 +14,8 @@ import {
 } from './seamTestLayout';
 
 export interface SeamTestPdfOptions extends SeamTestInput {
+  /** 인쇄 배율 보정 (기본 1) */
+  printScale?: number;
   filename?: string;
 }
 
@@ -27,59 +30,75 @@ export function exportSeamTestPdf(options: SeamTestPdfOptions) {
     format: 'a4',
   });
 
+  // 인쇄 배율 보정: 페이지 중심 기준 확대/축소
+  const k = options.printScale ?? 1;
+  const pageW = layout.plan.page.widthMm;
+  const pageH = layout.plan.page.heightMm;
+  const sx = (value: number) => scaleAboutPageCenter(value, pageW, k);
+  const sy = (value: number) => scaleAboutPageCenter(value, pageH, k);
+  const sRect = (rect: SeamRectMm): SeamRectMm => ({
+    x: sx(rect.x),
+    y: sy(rect.y),
+    width: rect.width * k,
+    height: rect.height * k,
+  });
+
   layout.pages.forEach((page, index) => {
     if (index > 0) {
       pdf.addPage('a4', layout.plan.orientation);
     }
 
     // 이미지 영역 외곽선 (포스터의 페이지 경계선과 동일한 역할)
+    const imageRect = sRect(page.imageRect);
     pdf.setDrawColor(35, 45, 57);
     pdf.setLineWidth(0.2);
-    pdf.rect(
-      page.imageRect.x,
-      page.imageRect.y,
-      page.imageRect.width,
-      page.imageRect.height,
-    );
+    pdf.rect(imageRect.x, imageRect.y, imageRect.width, imageRect.height);
 
     // 테스트 패턴
     pdf.setDrawColor(20, 40, 60);
     pdf.setLineWidth(0.4);
-    page.segments.forEach((seg) => pdf.line(seg.x1, seg.y1, seg.x2, seg.y2));
+    page.segments.forEach((seg) =>
+      pdf.line(sx(seg.x1), sy(seg.y1), sx(seg.x2), sy(seg.y2)),
+    );
 
     // 풀칠 영역 (포스터와 동일한 빗금)
     if (page.glueRect) {
-      drawGlueHatch(pdf, page.glueRect);
+      drawGlueHatch(pdf, sRect(page.glueRect), k);
     }
 
     // 페이지 라벨
-    pdf.setFontSize(PAGE_NUMBER_FONT_SIZE_PT);
+    pdf.setFontSize(PAGE_NUMBER_FONT_SIZE_PT * k);
     pdf.setTextColor(35, 45, 57);
-    pdf.text(page.labelText, page.labelXmm, page.labelYmm);
+    pdf.text(page.labelText, sx(page.labelXmm), sy(page.labelYmm));
 
     if (index === 0) {
-      const square = layout.calibrationSquare;
+      const square = sRect(layout.calibrationSquare);
       pdf.setDrawColor(160, 39, 39);
       pdf.setLineWidth(0.5);
       pdf.rect(square.x, square.y, square.width, square.height);
       pdf.setTextColor(160, 39, 39);
-      pdf.setFontSize(11);
-      pdf.text(`${Math.round(square.width)} mm`, square.x + 4, square.y + 8);
+      pdf.setFontSize(11 * k);
+      // 목표 크기(보정 전 기준값)를 표기한다. 보정 적용 시 실제 인쇄물이 이 값이 되어야 한다.
+      pdf.text(
+        `${Math.round(layout.calibrationSquare.width)} mm`,
+        square.x + 4,
+        square.y + 8,
+      );
 
       drawTextBlock(
         pdf,
-        createInstructionLines(layout),
-        page.imageRect.x + 6,
-        page.imageRect.y + 6,
-        Math.min(170, page.imageRect.width - 12),
+        createInstructionLines(layout, k),
+        imageRect.x + 6,
+        imageRect.y + 6,
+        Math.min(170, imageRect.width - 12),
       );
     } else {
       drawTextBlock(
         pdf,
         ['접합 테스트 2번 장 - 1번 장의 빗금(풀칠) 영역 위에 겹쳐 붙이세요.'],
-        page.imageRect.x + 6,
-        page.imageRect.y + 6,
-        Math.min(170, page.imageRect.width - 12),
+        imageRect.x + 6,
+        imageRect.y + 6,
+        Math.min(170, imageRect.width - 12),
       );
     }
   });
@@ -87,16 +106,22 @@ export function exportSeamTestPdf(options: SeamTestPdfOptions) {
   pdf.save(options.filename ?? 'A4-seam-test.pdf');
 }
 
-function createInstructionLines(layout: SeamTestLayout): string[] {
+function createInstructionLines(layout: SeamTestLayout, printScale: number): string[] {
   const squareMm = Math.round(layout.calibrationSquare.width);
-  return [
+  const lines = [
     '접합 테스트 페이지 (포스터 아님)',
     '1. 이 2장을 "실제 크기(100%)"로 인쇄하세요. "용지에 맞춤"은 끄세요.',
     `2. 빨간 사각형 한 변이 자로 정확히 ${squareMm}mm인지 확인하세요.`,
     '3. 2번 장을 1번 장의 빗금(풀칠) 영역 위에 맞춰 붙이세요.',
     '4. 눈금·원·사선이 어긋남 없이 이어지면 같은 설정으로 포스터를 인쇄하면 됩니다.',
-    '크기가 다르거나 어긋나면: 인쇄 창의 실제 크기/100% 선택과 여백 설정을 확인하세요.',
+    `크기가 다르면: 측정한 길이를 앱의 "테스트 사각형 실측값"에 입력한 뒤 다시 테스트하세요.`,
   ];
+  if (Math.abs(printScale - 1) > 1e-9) {
+    lines.push(
+      `* 인쇄 배율 보정 ${Math.round(printScale * 1000) / 10}%가 적용된 테스트지입니다.`,
+    );
+  }
+  return lines;
 }
 
 /** jsPDF 기본 폰트는 한글을 지원하지 않으므로 캔버스로 그려 이미지로 넣는다. */
@@ -145,11 +170,12 @@ function drawTextBlock(
   pdf.addImage(canvas.toDataURL('image/png'), 'PNG', xMm, yMm, widthMm, totalMm);
 }
 
-function drawGlueHatch(pdf: jsPDF, mark: SeamRectMm) {
+function drawGlueHatch(pdf: jsPDF, mark: SeamRectMm, printScale = 1) {
   pdf.setDrawColor(120, 120, 120);
   pdf.setLineWidth(GLUE_HATCH_LINE_WIDTH_MM);
+  const spacing = GLUE_HATCH_SPACING_MM * printScale;
 
-  for (let offset = -mark.height; offset < mark.width; offset += GLUE_HATCH_SPACING_MM) {
+  for (let offset = -mark.height; offset < mark.width; offset += spacing) {
     let x1 = mark.x + offset;
     let y1 = mark.y;
     let x2 = x1 + mark.height;

@@ -2,10 +2,12 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react';
 import {
   createManualGridPlan,
+  getA4Size,
   recommendTargetGrid,
   type GridPlan,
   type Orientation,
 } from './lib/geometry';
+import { resolvePrintScale } from './lib/printScale';
 import { createExportFilename } from './lib/exportFilename';
 import { loadImageFile, type LoadedImage } from './lib/imageLoader';
 import { exportPosterPdf } from './lib/pdfExport';
@@ -56,6 +58,8 @@ interface Settings {
   overlapMm: number;
   printerMarginMm: number;
   exportDpi: number;
+  /** 접합 테스트 100mm 사각형의 실측값 (인쇄 배율 보정용) */
+  measuredSquareMm: number;
   rotationDeg: number;
   imageScale: number;
   cropFocus: CropFocus;
@@ -77,6 +81,7 @@ const initialSettings: Settings = {
   // 일반 프린터는 가장자리 3~5mm를 인쇄하지 못하므로 안전한 5mm를 기본값으로 한다.
   printerMarginMm: 5,
   exportDpi: 200,
+  measuredSquareMm: 100,
   rotationDeg: 0,
   imageScale: 1,
   cropFocus: { x: 0.5, y: 0.5 },
@@ -232,6 +237,22 @@ export default function App() {
     };
   }, [loadedImage, layoutState.plan, layoutState.layout, settings]);
 
+  // 인쇄 배율 보정 (실측값 기반). 여백 한도를 넘으면 잘라내고 경고를 표시한다.
+  const printScale = useMemo(
+    () =>
+      resolvePrintScale({
+        measuredMm: settings.measuredSquareMm,
+        page: layoutState.plan?.page ?? getA4Size(settings.orientation),
+        printerMarginMm: settings.printerMarginMm,
+      }),
+    [
+      settings.measuredSquareMm,
+      settings.printerMarginMm,
+      settings.orientation,
+      layoutState.plan,
+    ],
+  );
+
   // 마우스 휠로 확대/축소 (cover 모드). 페이지 스크롤을 막아야 해서 non-passive로 등록.
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -306,6 +327,7 @@ export default function App() {
         showPageNumbers: settings.showPageNumbers,
         showPageBoundaries: settings.showPageBoundaries,
         showGlueMarks: settings.showGlueMarks,
+        printScale: printScale.factor,
         filename: createExportFilename({
           originalName: loadedImage.name,
           rows: activeWindow.endRow - activeWindow.startRow + 1,
@@ -356,6 +378,7 @@ export default function App() {
       orientation: layoutState.plan?.orientation ?? settings.orientation,
       overlapMm: settings.overlapMm,
       printerMarginMm: settings.printerMarginMm,
+      printScale: printScale.factor,
     });
   }
 
@@ -694,6 +717,31 @@ export default function App() {
             사각형)와 이음새가 매끄럽게 이어지는지(눈금·원·사선)를 미리 확인할 수
             있습니다. 이미지 없이도 현재 인쇄 설정으로 만들어집니다.
           </p>
+          <NumberField
+            label="테스트 사각형 실측값(mm)"
+            value={settings.measuredSquareMm}
+            min={50}
+            step={0.5}
+            onChange={(value) => updateSetting('measuredSquareMm', value)}
+          />
+          <p className="hint-text">
+            테스트의 100mm 사각형이 실제 몇 mm로 인쇄됐는지 입력하세요. 배율을 조절할 수
+            없는 인쇄 앱(예: Epson Smart Panel)에서도 실제 크기에 맞게 PDF를 보정합니다.
+            정확히 100mm로 나왔다면 100을 그대로 두세요.
+          </p>
+          {printScale.factor !== 1 ? (
+            <p className="print-note">
+              인쇄 배율 보정 {Math.round(printScale.factor * 1000) / 10}%가 모든 PDF에
+              적용됩니다. 보정 후 접합 테스트를 다시 인쇄해 100mm가 맞는지 확인하세요.
+            </p>
+          ) : null}
+          {printScale.clamped ? (
+            <p className="warning-text" role="alert">
+              여백이 작아 필요한 보정 배율(
+              {Math.round(printScale.requestedFactor * 1000) / 10}%)을 전부 적용할 수
+              없습니다. 여백을 늘리면 더 정확하게 보정됩니다.
+            </p>
+          ) : null}
         </div>
 
         <Summary
@@ -799,6 +847,7 @@ export default function App() {
           layout={layoutState.layout}
           settings={settings}
           imageSize={preparedImage?.size}
+          printScaleFactor={printScale.factor}
           onCancel={() => setIsConfirmOpen(false)}
           onConfirm={handleExport}
           isExporting={isExporting}
@@ -939,6 +988,7 @@ function ExportConfirmModal({
   layout,
   settings,
   imageSize,
+  printScaleFactor = 1,
   onCancel,
   onConfirm,
   isExporting,
@@ -947,6 +997,7 @@ function ExportConfirmModal({
   layout: PosterLayout;
   settings: Settings;
   imageSize?: { widthPx: number; heightPx: number };
+  printScaleFactor?: number;
   onCancel: () => void;
   onConfirm: () => void;
   isExporting: boolean;
@@ -1002,6 +1053,14 @@ function ExportConfirmModal({
           <div>
             <dt>여백 설정</dt>
             <dd>{settings.printerMarginMm > 0 ? `${settings.printerMarginMm}mm` : '없음'}</dd>
+          </div>
+          <div>
+            <dt>인쇄 배율 보정</dt>
+            <dd>
+              {printScaleFactor !== 1
+                ? `${Math.round(printScaleFactor * 1000) / 10}% (실측 ${settings.measuredSquareMm}mm)`
+                : '없음'}
+            </dd>
           </div>
         </dl>
         {usedPercent < 100 ? (
