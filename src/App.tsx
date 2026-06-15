@@ -4,6 +4,7 @@ import { MobileBottomNav } from './components/MobileBottomNav';
 import { initialSettings } from './constants';
 import { SettingsPanel } from './controls/SettingsPanel';
 import { useImageUpload } from './hooks/useImageUpload';
+import { usePasteImage } from './hooks/usePasteImage';
 import { usePosterLayout } from './hooks/usePosterLayout';
 import { usePreparedImage } from './hooks/usePreparedImage';
 import { usePrintScale } from './hooks/usePrintScale';
@@ -36,6 +37,9 @@ export default function App() {
       cropFocus: { x: 0.5, y: 0.5 },
     }));
   });
+
+  // 클립보드 이미지 Ctrl+V 붙여넣기 (업로드와 동일 경로 재사용)
+  usePasteImage(handleFileChange);
 
   const preparedImage = usePreparedImage(loadedImage, settings.rotationDeg);
   const layoutState = usePosterLayout(preparedImage, settings);
