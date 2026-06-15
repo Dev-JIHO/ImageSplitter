@@ -30,7 +30,8 @@ export function ImageUploadSection({
         </span>
       </div>
       <p className="hint-text">
-        오른쪽 미리보기 영역에 사진을 끌어다 놓아도 됩니다. {supportedImageText}.
+        오른쪽 미리보기 영역에 사진을 끌어다 놓거나, 복사한 이미지를 붙여넣기(Ctrl+V)
+        해도 됩니다. {supportedImageText}.
       </p>
       {imageError ? <p className="error-text">{imageError}</p> : null}
     </>
