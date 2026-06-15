@@ -1,0 +1,21 @@
+# 모든 텍스트 파일의 줄바꿈을 LF로 정규화 (Windows/Linux 혼용 환경 일관성 확보)
+* text=auto eol=lf
+
+# 소스/설정 파일은 항상 텍스트로 취급
+*.ts   text eol=lf
+*.tsx  text eol=lf
+*.js   text eol=lf
+*.jsx  text eol=lf
+*.json text eol=lf
+*.css  text eol=lf
+*.html text eol=lf
+*.md   text eol=lf
+
+# 바이너리 파일은 변환하지 않음
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.avif binary
+*.pdf  binary

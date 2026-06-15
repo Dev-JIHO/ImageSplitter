@@ -471,6 +471,8 @@ input:focus-visible {
   justify-content: center;
   min-height: calc(100vh - 48px);
   overflow: auto;
+  /* 스크롤바 출현↔소멸로 캔버스 폭이 진동하는 피드백 루프 방지: 스크롤바 공간을 항상 예약 */
+  scrollbar-gutter: stable;
   border: 1px solid #d8dcd3;
   border-radius: 8px;
   background:
