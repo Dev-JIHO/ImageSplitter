@@ -257,7 +257,7 @@ describe('poster layout', () => {
     expect(frame.width).toBeGreaterThan(plan.contentWidthMm);
   });
 
-  test('빈 공간이 전혀 없으면 라벨을 이미지 안쪽 모서리에 옅게(subtle) 배치한다', () => {
+  test('빈 공간이 전혀 없으면 페이지 번호를 표시하지 않는다(showLabel=false)', () => {
     const plan = createManualGridPlan({
       orientation: 'portrait',
       rows: 1,
@@ -271,9 +271,7 @@ describe('poster layout', () => {
     });
 
     expect(layout.slices[0].labelText).toBe('1-1');
-    expect(layout.slices[0].labelSubtle).toBe(true);
-    expect(layout.slices[0].labelXmm).toBe(196);
-    expect(layout.slices[0].labelYmm).toBe(295);
+    expect(layout.slices[0].showLabel).toBe(false);
   });
 
   test('places page labels on the bottom glue tab when available', () => {
@@ -329,8 +327,8 @@ describe('poster layout', () => {
     const slice = layout.slices.find((item) => item.row === 1 && item.column === 1);
 
     expect(slice).toBeDefined();
-    // 풀칠 0mm의 마지막 장은 이미지 모서리에 subtle 배치된다.
-    expect(slice!.labelSubtle).toBe(true);
+    // 풀칠 0mm의 마지막 장은 번호를 표시하지 않지만 라벨 좌표 변환 자체는 동작한다.
+    expect(slice!.showLabel).toBe(false);
     expect(getPreviewPageLabelPosition(plan, slice!)).toEqual({
       x: 406,
       y: 592,

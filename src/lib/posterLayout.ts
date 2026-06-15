@@ -1,4 +1,4 @@
-import { isUniformTabsActive, type GridPlan } from './geometry';
+import { type GridPlan } from './geometry';
 
 export type FitMode = 'cover' | 'fit';
 
@@ -38,8 +38,8 @@ export interface PageSlice {
   labelText: string;
   labelXmm: number;
   labelYmm: number;
-  /** 풀칠 탭이 없어 라벨을 이미지 위에 옅게 표시해야 하는 경우 */
-  labelSubtle: boolean;
+  /** 번호를 둘 빈 공간(풀칠 탭 등)이 있어 페이지 번호를 표시하는지 여부 */
+  showLabel: boolean;
 }
 
 export interface PageTabs {
@@ -52,28 +52,13 @@ export interface PageTabs {
 /**
  * 페이지별 풀칠 탭 소유권.
  *
- * 기본 방식: 세로 이음새는 왼쪽 페이지, 가로 이음새는 위 페이지가 탭을
- * 갖는다 (마지막 행+열 페이지는 탭 없음).
- *
- * 균일 예약 방식(uniformTabs): 모든 페이지가 (인쇄폭-풀칠폭)x(인쇄높이-풀칠폭)
- * 크기로 통일되어 탭 방향을 자유롭게 배정할 수 있다. 배정 규칙:
- *  - 세로 이음새: 첫 행은 왼쪽 페이지(오른쪽 탭), 나머지 행은 오른쪽 페이지(왼쪽 탭)
- *  - 가로 이음새: 첫 열은 아래 페이지(위 탭), 나머지 열은 위 페이지(아래 탭)
- * 이 규칙으로 2x2 이상 모든 격자에서 전 페이지가 최소 1개의 탭을 가지며,
- * 이미지가 완전한 직사각 격자로 타일링되므로 빈 구멍이 생기지 않는다.
+ * 세로 이음새는 왼쪽 페이지, 가로 이음새는 위 페이지가 탭을 갖는다.
+ * 따라서 마지막 열에는 오른쪽 탭이, 마지막 행에는 아래 탭이 없고,
+ * 최하단·최우측 모서리 페이지는 탭이 전혀 없다.
  */
 export function getPageTabs(plan: GridPlan, row: number, column: number): PageTabs {
   if (plan.overlapMm <= 0) {
     return { left: false, right: false, top: false, bottom: false };
-  }
-
-  if (isUniformTabsActive(plan)) {
-    return {
-      right: row === 0 && column < plan.columns - 1,
-      left: row > 0 && column > 0,
-      bottom: column > 0 && row < plan.rows - 1,
-      top: column === 0 && row > 0,
-    };
   }
 
   return {
@@ -149,7 +134,13 @@ export function createPosterLayout(
     input.cropFocus,
     input.imageScale,
   );
-  const imageFrameMm = createImageFrame(outputFrameMm, image, fitMode);
+  const imageFrameMm = createImageFrame(
+    outputFrameMm,
+    image,
+    fitMode,
+    input.imageScale,
+    input.cropFocus,
+  );
   const slices = normalizeSliceLabels(createPageSlices(plan, sourceRect, imageFrameMm));
 
   return {
@@ -259,28 +250,46 @@ function createImageFrame(
   outputFrameMm: RectMm,
   image: ImageSize,
   fitMode: FitMode,
+  imageScale = 1,
+  cropFocus: CropFocus = { x: 0.5, y: 0.5 },
 ): RectMm {
   if (fitMode === 'cover') {
     return outputFrameMm;
   }
 
+  // 통합 배치 모델(fit): 기본은 비율을 유지해 팔레트 안에 완전히 들어가는
+  // contain 크기. imageScale(>=1)로 확대하면 팔레트를 채우고(넘치는 부분은 잘림),
+  // cropFocus로 보이는 위치를 이동한다. 확대가 1이면 잘림 없는 기본 배치다.
   const imageRatio = image.widthPx / image.heightPx;
   const contentRatio = outputFrameMm.width / outputFrameMm.height;
-  const width =
+  const containWidth =
     imageRatio >= contentRatio
       ? outputFrameMm.width
       : outputFrameMm.height * imageRatio;
-  const height =
+  const containHeight =
     imageRatio >= contentRatio
       ? outputFrameMm.width / imageRatio
       : outputFrameMm.height;
 
-  return {
-    x: outputFrameMm.x + (outputFrameMm.width - width) / 2,
-    y: outputFrameMm.y + (outputFrameMm.height - height) / 2,
-    width,
-    height,
+  const scale = Math.max(1, imageScale);
+  const width = containWidth * scale;
+  const height = containHeight * scale;
+  const focus = {
+    x: clamp(cropFocus.x, 0, 1),
+    y: clamp(cropFocus.y, 0, 1),
   };
+  const freeX = width - outputFrameMm.width;
+  const freeY = height - outputFrameMm.height;
+  const x =
+    freeX > 0
+      ? outputFrameMm.x - freeX * focus.x
+      : outputFrameMm.x + (outputFrameMm.width - width) / 2;
+  const y =
+    freeY > 0
+      ? outputFrameMm.y - freeY * focus.y
+      : outputFrameMm.y + (outputFrameMm.height - height) / 2;
+
+  return { x, y, width, height };
 }
 
 function createOutputFrame(
@@ -465,14 +474,11 @@ function createPageSlices(
       const pageY = row * plan.page.heightMm;
       const printableWidth = plan.page.widthMm - plan.printerMarginMm * 2;
       const printableHeight = plan.page.heightMm - plan.printerMarginMm * 2;
-      const uniform = isUniformTabsActive(plan);
       const tabs = getPageTabs(plan, row, column);
-      const imageWidth = uniform
-        ? printableWidth - plan.overlapMm
-        : printableWidth - (column < plan.columns - 1 ? plan.overlapMm : 0);
-      const imageHeight = uniform
-        ? printableHeight - plan.overlapMm
-        : printableHeight - (row < plan.rows - 1 ? plan.overlapMm : 0);
+      const imageWidth =
+        printableWidth - (column < plan.columns - 1 ? plan.overlapMm : 0);
+      const imageHeight =
+        printableHeight - (row < plan.rows - 1 ? plan.overlapMm : 0);
       const logicalPage: RectMm = {
         x: column * (printableWidth - plan.overlapMm),
         y: row * (printableHeight - plan.overlapMm),
@@ -514,7 +520,7 @@ function createPageSlices(
         labelText: `${row + 1}-${column + 1}`,
         labelXmm: label.x,
         labelYmm: label.y,
-        labelSubtle: label.subtle,
+        showLabel: label.show,
       });
     }
   }
@@ -525,7 +531,8 @@ function createPageSlices(
 interface PageLabelPlacement {
   x: number;
   y: number;
-  subtle: boolean;
+  /** 번호를 둘 빈 공간이 있어 페이지 번호를 표시하는지 여부 */
+  show: boolean;
 }
 
 const LABEL_HEIGHT_MM = 5;
@@ -534,13 +541,9 @@ const LABEL_HEIGHT_MM = 5;
  * 페이지 번호 위치.
  *
  * 인쇄 가능 영역 안에서 이미지 밖의 빈 공간(풀칠 탭 또는 fit 모드의 여백)을
- * 아래 → 오른쪽 → 위 → 왼쪽 순서로 찾는다. 마지막 장처럼 이미지가 인쇄
- * 영역을 꽉 채워 빈 공간이 전혀 없으면, 이미지 안쪽 모서리에 작고 옅은
- * 글씨(subtle)로 표시한다.
- *
- * 참고: "모든 페이지에 풀칠 탭이 생기도록 재분배"하는 방안은 네 페이지가
- * 만나는 교차점에서 탭 소유권이 바람개비 모양으로 순환할 수밖에 없어
- * 이미지에 빈 구멍이 생기므로 기하학적으로 불가능하다.
+ * 아래 → 오른쪽 → 위 → 왼쪽 순서로 찾는다. 최하단·최우측 모서리처럼 이미지가
+ * 인쇄 영역을 꽉 채워 빈 공간이 전혀 없는 페이지(풀칠 0mm 포함)는 번호를
+ * 이미지 위에 겹쳐 쓰지 않고 아예 표시하지 않는다(show: false).
  */
 function createPageLabel(
   plan: GridPlan,
@@ -555,47 +558,50 @@ function createPageLabel(
   const right = dest.x + dest.width;
   const bottom = dest.y + dest.height;
 
-  // 1) 이미지 아래의 빈 공간 (아래 풀칠 탭 또는 fit 모드의 빈 영역)
+  // 라벨은 가운데 정렬(textAlign: center)로 그려지므로 x는 "탭 폭의 중앙" 좌표다.
+  const imageCenterX = clamp((left + right) / 2, printableLeft + 0.5, printableRight - 0.5);
+
+  // 1) 이미지 아래의 빈 공간 (아래 풀칠 탭 또는 fit 모드의 빈 영역) — 탭 폭 중앙
   if (printableBottom - bottom >= LABEL_HEIGHT_MM + 1.5) {
     return {
-      x: Math.max(printableLeft + 0.5, left),
+      x: imageCenterX,
       y: bottom + LABEL_HEIGHT_MM + 0.5,
-      subtle: false,
+      show: true,
     };
   }
 
-  // 2) 이미지 오른쪽의 빈 공간 (오른쪽 풀칠 탭 등)
+  // 2) 이미지 오른쪽의 빈 공간 (오른쪽 풀칠 탭 등) — 오른쪽 띠 폭 중앙
   if (printableRight - right >= 6) {
     return {
-      x: right + 1,
+      x: right + (printableRight - right) / 2,
       y: clamp(top + LABEL_HEIGHT_MM + 2, printableTop + LABEL_HEIGHT_MM, printableBottom - 1),
-      subtle: false,
+      show: true,
     };
   }
 
-  // 3) 이미지 위의 빈 공간
+  // 3) 이미지 위의 빈 공간 — 탭 폭 중앙
   if (top - printableTop >= LABEL_HEIGHT_MM + 1.5) {
     return {
-      x: Math.max(printableLeft + 0.5, left),
+      x: imageCenterX,
       y: top - 1.5,
-      subtle: false,
+      show: true,
     };
   }
 
-  // 4) 이미지 왼쪽의 빈 공간
+  // 4) 이미지 왼쪽의 빈 공간 — 왼쪽 띠 폭 중앙
   if (left - printableLeft >= 6) {
     return {
-      x: Math.max(printableLeft + 0.5, left - 6),
+      x: printableLeft + (left - printableLeft) / 2,
       y: clamp(top + LABEL_HEIGHT_MM + 2, printableTop + LABEL_HEIGHT_MM, printableBottom - 1),
-      subtle: false,
+      show: true,
     };
   }
 
-  // 5) 빈 공간이 없으면(마지막 장, 풀칠 0mm 등): 이미지 안쪽 모서리에 옅게
+  // 5) 빈 공간이 없으면(최하단·최우측 모서리, 풀칠 0mm 등): 번호를 표시하지 않는다.
   return {
     x: Math.max(left + 1.5, right - 14),
     y: Math.max(top + LABEL_HEIGHT_MM, bottom - 2),
-    subtle: true,
+    show: false,
   };
 }
 

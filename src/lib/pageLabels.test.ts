@@ -28,17 +28,17 @@ function labelOnImage(slice: PageSlice) {
 }
 
 describe('페이지 번호 배치', () => {
-  test('풀칠 10mm: 마지막 장을 제외한 모든 번호가 이미지 밖(풀칠 탭)에 있다', () => {
+  test('풀칠 10mm: 마지막 장만 번호 미표시, 나머지는 이미지 밖(풀칠 탭)에 표시', () => {
     for (const [rows, columns] of [[2, 2], [2, 3], [3, 3], [1, 3], [3, 1]] as const) {
       const { plan, layout } = makeLayout(rows, columns);
       layout.slices.forEach((slice) => {
         const isLast =
           slice.row === plan.rows - 1 && slice.column === plan.columns - 1;
         if (isLast) {
-          // 마지막 장은 탭이 없으므로 이미지 위에 옅게 표시된다.
-          expect(slice.labelSubtle).toBe(true);
+          // 최하단·최우측 모서리 장은 탭이 없어 번호를 표시하지 않는다.
+          expect(slice.showLabel, `${slice.labelText}`).toBe(false);
         } else {
-          expect(slice.labelSubtle, `${slice.labelText}`).toBe(false);
+          expect(slice.showLabel, `${slice.labelText}`).toBe(true);
           expect(labelOnImage(slice), `${slice.labelText} 라벨이 이미지 위에 있음`).toBe(
             false,
           );
@@ -47,25 +47,15 @@ describe('페이지 번호 배치', () => {
     }
   });
 
-  test('풀칠 0mm: 모든 번호가 subtle 처리된다', () => {
+  test('풀칠 0mm: 탭이 전혀 없어 모든 번호가 표시되지 않는다', () => {
     const { layout } = makeLayout(2, 2, 0);
     expect(layout.slices.length).toBe(4);
     layout.slices.forEach((slice) => {
-      expect(slice.labelSubtle).toBe(true);
+      expect(slice.showLabel).toBe(false);
     });
   });
 
-  test('subtle 라벨도 이미지 영역 안에 위치한다 (페이지 밖으로 나가지 않음)', () => {
-    const { layout } = makeLayout(2, 2, 0);
-    layout.slices.forEach((slice) => {
-      expect(slice.labelXmm).toBeGreaterThanOrEqual(slice.destXmm);
-      expect(slice.labelXmm).toBeLessThanOrEqual(slice.destXmm + slice.destWidthMm);
-      expect(slice.labelYmm).toBeGreaterThanOrEqual(slice.destYmm);
-      expect(slice.labelYmm).toBeLessThanOrEqual(slice.destYmm + slice.destHeightMm);
-    });
-  });
-
-  test('fit 모드에서 이미지 주변에 빈 공간이 있으면 번호는 빈 공간에 놓인다', () => {
+  test('fit 모드에서 이미지 주변에 빈 공간이 있으면 번호는 빈 공간에 표시된다', () => {
     const plan = createManualGridPlan({
       orientation: 'portrait',
       rows: 2,
@@ -79,7 +69,7 @@ describe('페이지 번호 배치', () => {
       fitMode: 'fit',
     });
     layout.slices.forEach((slice) => {
-      expect(slice.labelSubtle).toBe(false);
+      expect(slice.showLabel).toBe(true);
       expect(labelOnImage(slice)).toBe(false);
     });
   });

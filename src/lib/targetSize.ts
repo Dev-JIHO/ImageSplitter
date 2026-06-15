@@ -1,6 +1,6 @@
 import type { ImageSize } from './posterLayout';
 
-export type TargetSizeMode = 'both' | 'width' | 'height';
+export type TargetSizeMode = 'width' | 'height';
 
 export interface ResolveTargetSizeInput {
   mode: TargetSizeMode;
@@ -30,18 +30,9 @@ export function resolveTargetSize(
     };
   }
 
-  if (input.mode === 'height') {
-    assertPositive(input.heightMm, 'Target height');
-    return {
-      widthMm: input.heightMm * imageRatio,
-      heightMm: input.heightMm,
-    };
-  }
-
-  assertPositive(input.widthMm, 'Target width');
   assertPositive(input.heightMm, 'Target height');
   return {
-    widthMm: input.widthMm,
+    widthMm: input.heightMm * imageRatio,
     heightMm: input.heightMm,
   };
 }

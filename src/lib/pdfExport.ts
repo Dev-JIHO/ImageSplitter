@@ -5,7 +5,6 @@ import {
   GLUE_HATCH_LINE_WIDTH_MM,
   GLUE_HATCH_SPACING_MM,
   PAGE_NUMBER_FONT_SIZE_PT,
-  PAGE_NUMBER_SUBTLE_FONT_SIZE_PT,
 } from './renderConstants';
 import { getGlueMarks, type PageSlice, type PosterLayout } from './posterLayout';
 import { scaleAboutPageCenter } from './printScale';
@@ -89,16 +88,14 @@ export async function exportPosterPdf(options: PdfExportOptions) {
       renderGlueMarksToPdf(pdf, options.plan, slice, k);
     }
 
-    if (options.showPageNumbers) {
-      if (slice.labelSubtle) {
-        // 풀칠 탭이 없어 이미지 위에 표시되는 번호: 작고 옅게
-        pdf.setFontSize(PAGE_NUMBER_SUBTLE_FONT_SIZE_PT * k);
-        pdf.setTextColor(160, 160, 160);
-      } else {
-        pdf.setFontSize(PAGE_NUMBER_FONT_SIZE_PT * k);
-        pdf.setTextColor(35, 45, 57);
-      }
-      pdf.text(slice.labelText, sx(slice.labelXmm), sy(slice.labelYmm));
+    // 풀칠 탭이 없어 번호 둘 공간이 없는 페이지는 번호를 표시하지 않는다.
+    // labelXmm은 탭 폭의 중앙 좌표이므로 가운데 정렬로 그린다.
+    if (options.showPageNumbers && slice.showLabel) {
+      pdf.setFontSize(PAGE_NUMBER_FONT_SIZE_PT * k);
+      pdf.setTextColor(35, 45, 57);
+      pdf.text(slice.labelText, sx(slice.labelXmm), sy(slice.labelYmm), {
+        align: 'center',
+      });
     }
 
     // 페이지 사이마다 브라우저에 제어권을 넘겨 진행 표시(isExporting)가 렌더링되도록 한다.
@@ -180,8 +177,5 @@ function renderGlueMarksToPdf(
           pdf.line(x1, y1, x2, y2);
         }
       }
-
-      pdf.setLineWidth(GLUE_BORDER_LINE_WIDTH_MM);
-      pdf.rect(mark.xMm, mark.yMm, mark.widthMm, mark.heightMm);
     });
 }
