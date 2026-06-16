@@ -58,7 +58,7 @@ npm run test:watch   # vitest watch
 |------|------|
 | `geometry.ts` | A4 크기, `createManualGridPlan`, `recommendTargetGrid`, `GridPlan` 타입 |
 | `posterLayout.ts` | `createPosterLayout`(슬라이스), 풀칠 탭(`getPageTabs`), 풀칠 마크(`getGlueMarks`), 활성 페이지 윈도우(`getActivePageWindow`), 프린터 프레임 |
-| `targetSize.ts` | 목표 크기(가로/세로 기준, 이미지 비율 유지) 해석 |
+| `targetSize.ts` | 목표 크기 해석: `exact`(가로+세로 그대로) / `width`·`height`(한 변+이미지 비율) |
 | `printScale.ts` | 실측 기반 인쇄 배율 보정, 여백 한도 클램프 |
 | `pdfExport.ts` | 포스터 PDF 생성, `mmToPixels`, 슬라이스 정렬 |
 | `seamTestLayout.ts` / `seamTestPdf.ts` | 접합 테스트(100mm 사각형·눈금·이음새) 패턴·PDF |

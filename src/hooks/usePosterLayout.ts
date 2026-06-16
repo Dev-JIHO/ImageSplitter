@@ -19,10 +19,8 @@ export function usePosterLayout(
       const targetSize =
         settings.mode === 'target'
           ? resolveTargetSize({
-              mode: settings.targetSizeMode,
               widthMm: settings.targetWidthMm,
               heightMm: settings.targetHeightMm,
-              image: preparedImage.size,
             })
           : null;
       const plan = targetSize
@@ -39,10 +37,12 @@ export function usePosterLayout(
             overlapMm: settings.overlapMm,
             printerMarginMm: settings.printerMarginMm,
           });
+      // 완성 크기 모드(정확한 크기·가로/세로 기준)는 입력한 완성 크기를 항상
+      // 그대로 유지해야 하므로 영역을 고정하는 cover 배치를 쓴다(확대는 영역
+      // 안에서 잘라내기로만 작동). 수동(A4 장수) 모드만 비율 유지(contain).
       const layout = createPosterLayout(plan, {
         image: preparedImage.size,
-        // 통합 배치 모델: 항상 contain 기반(fit) + 확대/위치 조정
-        fitMode: 'fit',
+        fitMode: targetSize ? 'cover' : 'fit',
         cropFocus: settings.cropFocus,
         imageScale: settings.imageScale,
         outputFrameMm: targetSize

@@ -17,7 +17,7 @@ export function useCanvasZoom(
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
       setSettings((current) => {
-        const next = clamp(current.imageScale + (event.deltaY < 0 ? 0.05 : -0.05), 1, 4);
+        const next = clamp(current.imageScale + (event.deltaY < 0 ? 0.05 : -0.05), 1, 8);
         return next === current.imageScale ? current : { ...current, imageScale: next };
       });
     };

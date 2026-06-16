@@ -36,10 +36,99 @@ input:focus-visible {
 
 .app-shell {
   display: grid;
-  grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr) minmax(264px, 312px);
   gap: 24px;
   min-height: 100vh;
   padding: 24px;
+}
+
+.app-shell[data-left-collapsed='true'] {
+  grid-template-columns: 46px minmax(0, 1fr) minmax(264px, 312px);
+}
+
+.app-shell[data-right-collapsed='true'] {
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr) 46px;
+}
+
+.app-shell[data-left-collapsed='true'][data-right-collapsed='true'] {
+  grid-template-columns: 46px minmax(0, 1fr) 46px;
+}
+
+.panel-collapse-toggle {
+  align-self: flex-end;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 4px 8px;
+  border: 1px solid #c9d0c3;
+  border-radius: 6px;
+  background: #f3f5ef;
+  color: #344054;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.control-panel[data-collapsed='true'],
+.tools-panel[data-collapsed='true'] {
+  padding: 8px 6px;
+  align-items: center;
+  overflow: visible;
+}
+
+.control-panel[data-collapsed='true'] > :not(.panel-collapse-toggle),
+.tools-panel[data-collapsed='true'] > :not(.panel-collapse-toggle) {
+  display: none;
+}
+
+.tools-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-self: start;
+  position: sticky;
+  top: 24px;
+  padding: 16px;
+  border: 1px solid #d8dcd3;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgba(31, 41, 51, 0.08);
+}
+
+.tools-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tool-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tool-label {
+  color: #5d6875;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tool-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.tools-panel .toolbar-range {
+  display: grid;
+  grid-template-columns: auto minmax(80px, 1fr) 44px;
+  align-items: center;
+  gap: 8px;
+  color: #344054;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tools-panel .export-button {
+  width: 100%;
 }
 
 .control-panel,
@@ -728,7 +817,10 @@ input:focus-visible {
 }
 
 @media (max-width: 860px) {
-  .app-shell {
+  .app-shell,
+  .app-shell[data-left-collapsed="true"],
+  .app-shell[data-right-collapsed="true"],
+  .app-shell[data-left-collapsed="true"][data-right-collapsed="true"] {
     grid-template-columns: 1fr;
     min-height: 100dvh;
     padding: 12px 12px 78px;
@@ -740,8 +832,29 @@ input:focus-visible {
   }
 
   .control-panel[data-mobile-active="false"],
-  .preview-panel[data-mobile-active="false"] {
+  .preview-panel[data-mobile-active="false"],
+  .tools-panel[data-mobile-active="false"] {
     display: none;
+  }
+
+  .panel-collapse-toggle {
+    display: none;
+  }
+
+  .control-panel[data-collapsed="true"] > :not(.panel-collapse-toggle),
+  .tools-panel[data-collapsed="true"] > :not(.panel-collapse-toggle) {
+    display: revert;
+  }
+
+  .control-panel[data-collapsed="true"],
+  .tools-panel[data-collapsed="true"] {
+    padding: 16px;
+    align-items: stretch;
+  }
+
+  .tools-panel {
+    align-self: stretch;
+    position: static;
   }
 
   .control-panel {

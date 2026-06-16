@@ -78,45 +78,25 @@ export function SizingModeSection() {
         </>
       ) : (
         <>
-          <fieldset className="segmented">
-            <legend>크기 기준</legend>
-            <button
-              type="button"
-              className={settings.targetSizeMode === 'width' ? 'active' : ''}
-              onClick={() => updateSetting('targetSizeMode', 'width')}
-            >
-              가로 기준
-            </button>
-            <button
-              type="button"
-              className={settings.targetSizeMode === 'height' ? 'active' : ''}
-              onClick={() => updateSetting('targetSizeMode', 'height')}
-            >
-              세로 기준
-            </button>
-          </fieldset>
           <div className="field-grid">
-            {settings.targetSizeMode === 'width' ? (
-              <NumberField
-                label="완성 가로(mm)"
-                value={settings.targetWidthMm}
-                min={1}
-                step={1}
-                onChange={(value) => updateSetting('targetWidthMm', value)}
-              />
-            ) : (
-              <NumberField
-                label="완성 세로(mm)"
-                value={settings.targetHeightMm}
-                min={1}
-                step={1}
-                onChange={(value) => updateSetting('targetHeightMm', value)}
-              />
-            )}
+            <NumberField
+              label="완성 가로(mm)"
+              value={settings.targetWidthMm}
+              min={1}
+              step={1}
+              onChange={(value) => updateSetting('targetWidthMm', value)}
+            />
+            <NumberField
+              label="완성 세로(mm)"
+              value={settings.targetHeightMm}
+              min={1}
+              step={1}
+              onChange={(value) => updateSetting('targetHeightMm', value)}
+            />
           </div>
           <p className="hint-text">
-            기준 변 길이만 입력하면 나머지 변은 이미지 비율에 맞춰 자동 계산됩니다. 이미지가
-            어색하게 잘리지 않습니다.
+            완성될 가로·세로(mm)를 입력하면 그 크기로 정확히 만들어집니다(게시판 등). 이미지가
+            영역을 가득 채우며, 비율이 다르면 넘치는 부분이 잘립니다(드래그로 위치 조정).
           </p>
         </>
       )}

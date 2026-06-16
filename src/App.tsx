@@ -13,6 +13,7 @@ import { getActivePageWindow } from './lib/posterLayout';
 import { exportPosterPdf } from './lib/pdfExport';
 import { exportSeamTestPdf } from './lib/seamTestPdf';
 import { PreviewPanel } from './preview/PreviewPanel';
+import { PreviewSidebar } from './preview/PreviewSidebar';
 import { SettingsProvider } from './SettingsContext';
 import type { MobilePanel, Settings } from './types';
 
@@ -22,6 +23,8 @@ export default function App() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [hasSeamTestExported, setHasSeamTestExported] = useState(false);
   const [activeMobilePanel, setActiveMobilePanel] = useState<MobilePanel>('settings');
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
 
   function updateSetting<Key extends keyof Settings>(key: Key, value: Settings[Key]) {
     setSettings((current) => ({ ...current, [key]: value }));
@@ -44,6 +47,11 @@ export default function App() {
   const preparedImage = usePreparedImage(loadedImage, settings.rotationDeg);
   const layoutState = usePosterLayout(preparedImage, settings);
   const printScale = usePrintScale(settings, layoutState.plan);
+
+  const ready = !!preparedImage && !!layoutState.plan && !!layoutState.layout;
+  const canPan =
+    !!layoutState.layout &&
+    (layoutState.layout.fitMode === 'cover' || settings.imageScale > 1);
 
   function handleRequestExport() {
     if (!loadedImage || !preparedImage || !layoutState.plan || !layoutState.layout) return;
@@ -96,9 +104,16 @@ export default function App() {
 
   return (
     <SettingsProvider value={{ settings, setSettings, updateSetting }}>
-      <main className="app-shell" aria-label="A4 이미지 분할 PDF 생성기">
+      <main
+        className="app-shell"
+        data-left-collapsed={leftCollapsed}
+        data-right-collapsed={rightCollapsed}
+        aria-label="A4 이미지 분할 PDF 생성기"
+      >
         <SettingsPanel
           active={activeMobilePanel !== 'preview'}
+          collapsed={leftCollapsed}
+          onToggleCollapse={() => setLeftCollapsed((value) => !value)}
           loadedImage={loadedImage}
           imageError={imageError}
           onFileSelected={handleFileChange}
@@ -113,8 +128,16 @@ export default function App() {
           image={preparedImage?.source ?? null}
           plan={layoutState.plan}
           layout={layoutState.layout}
-          isExporting={isExporting}
           onFileSelected={handleFileChange}
+        />
+
+        <PreviewSidebar
+          active={activeMobilePanel === 'preview'}
+          collapsed={rightCollapsed}
+          onToggleCollapse={() => setRightCollapsed((value) => !value)}
+          ready={ready}
+          canPan={canPan}
+          isExporting={isExporting}
           onRequestExport={handleRequestExport}
         />
 

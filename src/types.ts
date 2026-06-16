@@ -1,6 +1,6 @@
 import type { GridPlan, Orientation } from './lib/geometry';
 import type { CropFocus, PosterLayout } from './lib/posterLayout';
-import type { ResolvedTargetSize, TargetSizeMode } from './lib/targetSize';
+import type { ResolvedTargetSize } from './lib/targetSize';
 
 export type SizingMode = 'manual' | 'target';
 export type MobilePanel = 'settings' | 'preview';
@@ -15,7 +15,6 @@ export interface LayoutState {
 
 export interface Settings {
   mode: SizingMode;
-  targetSizeMode: TargetSizeMode;
   orientation: Orientation;
   rows: number;
   columns: number;
