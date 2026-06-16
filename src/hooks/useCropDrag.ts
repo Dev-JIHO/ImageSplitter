@@ -1,11 +1,7 @@
 import { useRef, type PointerEvent } from 'react';
 import type { GridPlan } from '../lib/geometry';
 import { clamp } from '../lib/num';
-import {
-  getActivePageWindow,
-  type CropFocus,
-  type PosterLayout,
-} from '../lib/posterLayout';
+import { type CropFocus, type PosterLayout } from '../lib/posterLayout';
 import type { Settings } from '../types';
 
 interface CropDragState {
@@ -16,7 +12,7 @@ interface CropDragState {
 }
 
 /**
- * cover 모드에서 미리보기 캔버스를 드래그해 crop focus를 조정하는 포인터 핸들러 모음.
+ * 확대된 상태에서 미리보기 캔버스를 드래그해 보이는 위치(crop focus)를 조정하는 핸들러.
  */
 export function useCropDrag(
   plan: GridPlan | null,
@@ -33,9 +29,11 @@ export function useCropDrag(
 
     const canvas = event.currentTarget;
     const rect = canvas.getBoundingClientRect();
-    const activeWindow = getActivePageWindow(plan, layout.slices);
-    const scaleX = activeWindow.widthMm / rect.width;
-    const scaleY = activeWindow.heightMm / rect.height;
+    // 미리보기는 전체 격자를 표시하므로 격자 크기 기준으로 픽셀→mm 변환한다.
+    const gridWidthMm = plan.columns * plan.page.widthMm;
+    const gridHeightMm = plan.rows * plan.page.heightMm;
+    const scaleX = gridWidthMm / rect.width;
+    const scaleY = gridHeightMm / rect.height;
     const deltaXmm = (event.clientX - drag.startClientX) * scaleX;
     const deltaYmm = (event.clientY - drag.startClientY) * scaleY;
     const frame = layout.imageFrameMm;
@@ -46,8 +44,8 @@ export function useCropDrag(
 
   return {
     onPointerDown(event: PointerEvent<HTMLCanvasElement>) {
-      // 확대된 상태(팔레트보다 큰 이미지)에서만 위치 이동이 의미가 있다.
-      if (settings.imageScale <= 1) return;
+      // 확대됐거나(자르기 여지 있음) cover(영역 채우기) 모드면 위치 이동이 의미가 있다.
+      if (layout?.fitMode !== 'cover' && settings.imageScale <= 1) return;
       event.currentTarget.setPointerCapture(event.pointerId);
       cropDragRef.current = {
         pointerId: event.pointerId,

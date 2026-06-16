@@ -1,10 +1,8 @@
 import type { GridPlan } from '../lib/geometry';
 import {
-  getActivePageWindow,
   getGlueMarks,
   getPagePrinterFrame,
   getPreviewPageLabelPosition,
-  type ActivePageWindow,
   type PosterLayout,
 } from '../lib/posterLayout';
 import {
@@ -26,22 +24,24 @@ export interface PreviewCanvasSize {
 }
 
 /**
- * 활성 페이지 윈도우(mm)로부터 미리보기 캔버스의 스케일과 픽셀 크기를 계산한다.
+ * 미리보기 캔버스의 스케일과 픽셀 크기를 계산한다 (mm 격자 크기 기준).
  * 순수 함수 — Canvas 없이 단위 테스트할 수 있다.
  */
-export function computePreviewCanvasSize(
-  activeWindow: ActivePageWindow,
-): PreviewCanvasSize {
-  const scale = Math.min(
-    PREVIEW_MAX_WIDTH_PX / activeWindow.widthMm,
-    PREVIEW_MAX_SCALE,
-  );
-  const width = Math.max(320, Math.round(activeWindow.widthMm * scale));
-  const height = Math.max(220, Math.round(activeWindow.heightMm * scale));
+export function computePreviewCanvasSize(area: {
+  widthMm: number;
+  heightMm: number;
+}): PreviewCanvasSize {
+  const scale = Math.min(PREVIEW_MAX_WIDTH_PX / area.widthMm, PREVIEW_MAX_SCALE);
+  const width = Math.max(320, Math.round(area.widthMm * scale));
+  const height = Math.max(220, Math.round(area.heightMm * scale));
   return { scale, width, height };
 }
 
-/** 미리보기 캔버스에 포스터 레이아웃을 그린다. */
+/**
+ * 미리보기 캔버스에 포스터 레이아웃을 그린다.
+ * 설정한 행×열 격자 전체를 항상 표시하고, 이미지가 들어가지 않는 페이지는
+ * '인쇄 안 함'으로 흐리게 표시한다(내보내기에서는 제외).
+ */
 export function drawPoster(
   canvas: HTMLCanvasElement | null,
   image: CanvasImageSource,
@@ -53,8 +53,12 @@ export function drawPoster(
   const context = canvas.getContext('2d');
   if (!context) return;
 
-  const activeWindow = getActivePageWindow(plan, layout.slices);
-  const { scale, width, height } = computePreviewCanvasSize(activeWindow);
+  const gridWidthMm = plan.columns * plan.page.widthMm;
+  const gridHeightMm = plan.rows * plan.page.heightMm;
+  const { scale, width, height } = computePreviewCanvasSize({
+    widthMm: gridWidthMm,
+    heightMm: gridHeightMm,
+  });
   canvas.width = width;
   canvas.height = height;
 
@@ -63,73 +67,55 @@ export function drawPoster(
 
   context.save();
   context.scale(scale, scale);
-  context.translate(-activeWindow.xMm, -activeWindow.yMm);
 
-  context.fillStyle = 'rgba(229, 76, 76, 0.12)';
-  context.fillRect(
-    activeWindow.xMm,
-    activeWindow.yMm,
-    activeWindow.widthMm,
-    activeWindow.heightMm,
-  );
-  context.clearRect(
-    activeWindow.xMm,
-    activeWindow.yMm,
-    activeWindow.widthMm,
-    activeWindow.heightMm,
-  );
-  context.fillStyle = '#ffffff';
-  context.fillRect(
-    activeWindow.xMm,
-    activeWindow.yMm,
-    activeWindow.widthMm,
-    activeWindow.heightMm,
-  );
-
-  const renderedPages = new Set<string>();
-  layout.slices.forEach((slice) => {
-    const pageKey = `${slice.row}:${slice.column}`;
-    if (renderedPages.has(pageKey)) return;
-    renderedPages.add(pageKey);
-
-    const pageX = slice.column * plan.page.widthMm;
-    const pageY = slice.row * plan.page.heightMm;
-    context.fillStyle = '#ffffff';
-    context.fillRect(pageX, pageY, plan.page.widthMm, plan.page.heightMm);
-  });
-
-  if (settings.printerMarginMm > 0) {
-    context.fillStyle = 'rgba(126, 87, 194, 0.13)';
-    renderedPages.forEach((pageKey) => {
-      const [row, column] = pageKey.split(':').map(Number);
-      const pageX = column * plan.page.widthMm;
-      const pageY = row * plan.page.heightMm;
-      const printerFrame = getPagePrinterFrame(plan, row, column);
-      context.fillRect(pageX, pageY, plan.page.widthMm, settings.printerMarginMm);
+  // 격자 전체를 흰색 페이지 배경으로 채운다.
+  for (let row = 0; row < plan.rows; row += 1) {
+    for (let column = 0; column < plan.columns; column += 1) {
+      context.fillStyle = '#ffffff';
       context.fillRect(
-        pageX,
-        pageY + plan.page.heightMm - settings.printerMarginMm,
+        column * plan.page.widthMm,
+        row * plan.page.heightMm,
         plan.page.widthMm,
-        settings.printerMarginMm,
-      );
-      context.fillRect(pageX, pageY, settings.printerMarginMm, plan.page.heightMm);
-      context.fillRect(
-        pageX + plan.page.widthMm - settings.printerMarginMm,
-        pageY,
-        settings.printerMarginMm,
         plan.page.heightMm,
       );
-      context.strokeStyle = 'rgba(126, 87, 194, 0.7)';
-      context.lineWidth = Math.max(1 / scale, 0.6);
-      context.strokeRect(
-        printerFrame.x,
-        printerFrame.y,
-        printerFrame.width,
-        printerFrame.height,
-      );
-    });
+    }
   }
 
+  // 프린터 여백(인쇄 불가 영역) 표시 — 모든 페이지.
+  if (settings.printerMarginMm > 0) {
+    for (let row = 0; row < plan.rows; row += 1) {
+      for (let column = 0; column < plan.columns; column += 1) {
+        const pageX = column * plan.page.widthMm;
+        const pageY = row * plan.page.heightMm;
+        const printerFrame = getPagePrinterFrame(plan, row, column);
+        context.fillStyle = 'rgba(126, 87, 194, 0.13)';
+        context.fillRect(pageX, pageY, plan.page.widthMm, settings.printerMarginMm);
+        context.fillRect(
+          pageX,
+          pageY + plan.page.heightMm - settings.printerMarginMm,
+          plan.page.widthMm,
+          settings.printerMarginMm,
+        );
+        context.fillRect(pageX, pageY, settings.printerMarginMm, plan.page.heightMm);
+        context.fillRect(
+          pageX + plan.page.widthMm - settings.printerMarginMm,
+          pageY,
+          settings.printerMarginMm,
+          plan.page.heightMm,
+        );
+        context.strokeStyle = 'rgba(126, 87, 194, 0.7)';
+        context.lineWidth = Math.max(1 / scale, 0.6);
+        context.strokeRect(
+          printerFrame.x,
+          printerFrame.y,
+          printerFrame.width,
+          printerFrame.height,
+        );
+      }
+    }
+  }
+
+  // 이미지 슬라이스.
   layout.slices.forEach((slice) => {
     context.drawImage(
       image,
@@ -144,6 +130,7 @@ export function drawPoster(
     );
   });
 
+  // 풀칠 영역(노란 음영 + 빗금).
   if (settings.showGlueMarks && settings.overlapMm > 0) {
     context.fillStyle = 'rgba(255, 180, 0, 0.12)';
     layout.slices.forEach((slice) => {
@@ -154,11 +141,8 @@ export function drawPoster(
         slice.previewHeightMm,
       );
     });
-  }
 
-  if (settings.showGlueMarks && settings.overlapMm > 0) {
     const glueStroke = 'rgba(0, 0, 0, 0.55)';
-
     const glueMarks = getGlueMarks(plan, layout.slices);
     context.strokeStyle = glueStroke;
     context.lineWidth = Math.max(GLUE_HATCH_LINE_WIDTH_MM, 1 / scale);
@@ -183,58 +167,60 @@ export function drawPoster(
     });
   }
 
+  // 페이지 경계선(파란 점선).
   context.setLineDash([]);
-  context.strokeStyle = 'rgba(229, 76, 76, 0.95)';
-  context.lineWidth = Math.max(1 / scale, 0.8);
-  context.strokeRect(
-    activeWindow.xMm,
-    activeWindow.yMm,
-    activeWindow.widthMm,
-    activeWindow.heightMm,
-  );
-
   context.strokeStyle = 'rgba(11, 94, 215, 0.95)';
   context.lineWidth = Math.max(1 / scale, 0.8);
   context.setLineDash([4 / scale, 3 / scale]);
-
   for (let column = 1; column < plan.columns; column += 1) {
     const x = column * plan.page.widthMm;
-    if (x <= activeWindow.xMm || x >= activeWindow.xMm + activeWindow.widthMm) continue;
     context.beginPath();
-    context.moveTo(x, activeWindow.yMm);
-    context.lineTo(x, activeWindow.yMm + activeWindow.heightMm);
+    context.moveTo(x, 0);
+    context.lineTo(x, gridHeightMm);
     context.stroke();
   }
   for (let row = 1; row < plan.rows; row += 1) {
     const y = row * plan.page.heightMm;
-    if (y <= activeWindow.yMm || y >= activeWindow.yMm + activeWindow.heightMm) continue;
     context.beginPath();
-    context.moveTo(activeWindow.xMm, y);
-    context.lineTo(activeWindow.xMm + activeWindow.widthMm, y);
+    context.moveTo(0, y);
+    context.lineTo(gridWidthMm, y);
     context.stroke();
   }
 
+  // 격자 외곽선.
   context.setLineDash([]);
   context.strokeStyle = 'rgba(20, 31, 45, 0.9)';
-  context.strokeRect(
-    activeWindow.xMm,
-    activeWindow.yMm,
-    activeWindow.widthMm,
-    activeWindow.heightMm,
-  );
+  context.lineWidth = Math.max(1 / scale, 0.8);
+  context.strokeRect(0, 0, gridWidthMm, gridHeightMm);
 
+  // 이미지가 없는 페이지: '인쇄 안 함' 표시.
+  const imagePages = new Set(layout.slices.map((slice) => `${slice.row}:${slice.column}`));
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  for (let row = 0; row < plan.rows; row += 1) {
+    for (let column = 0; column < plan.columns; column += 1) {
+      if (imagePages.has(`${row}:${column}`)) continue;
+      const cx = column * plan.page.widthMm + plan.page.widthMm / 2;
+      const cy = row * plan.page.heightMm + plan.page.heightMm / 2;
+      context.font = `500 ${PAGE_NUMBER_FONT_SIZE_PT * PT_TO_MM}px sans-serif`;
+      context.fillStyle = 'rgba(120, 128, 138, 0.6)';
+      context.fillText('인쇄 안 함', cx, cy);
+    }
+  }
+  context.textBaseline = 'alphabetic';
+
+  // 페이지 번호(이미지가 있는 페이지, 풀칠 탭 폭 기준 가운데).
   if (settings.showPageNumbers) {
     context.font = `500 ${PAGE_NUMBER_FONT_SIZE_PT * PT_TO_MM}px sans-serif`;
     context.fillStyle = 'rgba(20, 31, 45, 0.82)';
     context.textAlign = 'center';
     layout.slices.forEach((slice) => {
-      // 풀칠 탭이 없어 번호 둘 공간이 없는 페이지는 번호를 표시하지 않는다.
       if (!slice.showLabel) return;
       const label = getPreviewPageLabelPosition(plan, slice);
       context.fillText(slice.labelText, label.x, label.y);
     });
-    context.textAlign = 'start';
   }
+  context.textAlign = 'start';
 
   context.restore();
 }

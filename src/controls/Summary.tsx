@@ -1,6 +1,6 @@
 import type { GridPlan } from '../lib/geometry';
 import { round } from '../lib/num';
-import { getActivePageWindow, type PosterLayout } from '../lib/posterLayout';
+import type { PosterLayout } from '../lib/posterLayout';
 import type { ResolvedTargetSize } from '../lib/targetSize';
 
 export function Summary({
@@ -22,23 +22,25 @@ export function Summary({
     return <p className="hint-text">이미지를 업로드하고 설정을 입력해주세요.</p>;
   }
 
-  const activeWindow = getActivePageWindow(plan, layout.slices);
-  const activeRows = activeWindow.endRow - activeWindow.startRow + 1;
-  const activeColumns = activeWindow.endColumn - activeWindow.startColumn + 1;
+  const totalPages = plan.rows * plan.columns;
+  const printedPages = layout.slices.length;
 
   return (
     <dl className="summary">
       <div>
         <dt>추천/설정</dt>
-        <dd>{plan.orientation === 'portrait' ? 'A4 세로' : 'A4 가로'} · {activeRows}행 x {activeColumns}열</dd>
+        <dd>{plan.orientation === 'portrait' ? 'A4 세로' : 'A4 가로'} · {plan.rows}행 x {plan.columns}열</dd>
       </div>
       <div>
         <dt>PDF</dt>
-        <dd>{layout.slices.length}장</dd>
+        <dd>
+          {printedPages}장 인쇄
+          {printedPages < totalPages ? ` (빈 ${totalPages - printedPages}장 제외)` : ''}
+        </dd>
       </div>
       <div>
         <dt>팔레트</dt>
-        <dd>{round(activeWindow.widthMm)} x {round(activeWindow.heightMm)}mm</dd>
+        <dd>{round(plan.totalWidthMm)} x {round(plan.totalHeightMm)}mm</dd>
       </div>
       <div>
         <dt>이미지 배치</dt>

@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from 'react';
+import { useEffect, useRef } from 'react';
 import type { GridPlan } from '../lib/geometry';
 import type { PosterLayout } from '../lib/posterLayout';
 import { useSettings } from '../SettingsContext';
@@ -10,18 +10,17 @@ export function PreviewCanvas({
   image,
   plan,
   layout,
-  canvasRef,
 }: {
   image: CanvasImageSource;
   plan: GridPlan;
   layout: PosterLayout;
-  canvasRef: RefObject<HTMLCanvasElement | null>;
 }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const { settings, setSettings, updateSetting } = useSettings();
 
   useEffect(() => {
     drawPoster(canvasRef.current, image, plan, layout, settings);
-  }, [canvasRef, image, plan, layout, settings]);
+  }, [image, plan, layout, settings]);
 
   useCanvasZoom(canvasRef, true, setSettings);
   const dragHandlers = useCropDrag(plan, layout, settings, updateSetting);
@@ -29,7 +28,9 @@ export function PreviewCanvas({
   return (
     <canvas
       ref={canvasRef}
-      className={`preview-canvas ${settings.imageScale > 1 ? 'is-draggable' : ''}`}
+      className={`preview-canvas ${
+        layout.fitMode === 'cover' || settings.imageScale > 1 ? 'is-draggable' : ''
+      }`}
       aria-label="미리보기 이미지 위치 조정"
       {...dragHandlers}
     />

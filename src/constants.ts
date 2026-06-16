@@ -2,7 +2,6 @@ import type { Settings } from './types';
 
 export const initialSettings: Settings = {
   mode: 'manual',
-  targetSizeMode: 'height',
   orientation: 'portrait',
   rows: 2,
   columns: 2,

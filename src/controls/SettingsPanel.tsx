@@ -10,6 +10,8 @@ import { Summary } from './Summary';
 
 export function SettingsPanel({
   active,
+  collapsed,
+  onToggleCollapse,
   loadedImage,
   imageError,
   onFileSelected,
@@ -19,6 +21,8 @@ export function SettingsPanel({
   onExportSeamTest,
 }: {
   active: boolean;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
   loadedImage: LoadedImage | null;
   imageError: string;
   onFileSelected: (file: File | undefined) => void;
@@ -30,7 +34,21 @@ export function SettingsPanel({
   const settingsReady = !!loadedImage && !layoutState.error;
 
   return (
-    <section className="control-panel" data-mobile-active={active} aria-label="분할 설정">
+    <section
+      className="control-panel"
+      data-mobile-active={active}
+      data-collapsed={collapsed}
+      aria-label="분할 설정"
+    >
+      <button
+        type="button"
+        className="panel-collapse-toggle"
+        onClick={onToggleCollapse}
+        aria-label={collapsed ? '설정 패널 펼치기' : '설정 패널 접기'}
+        title={collapsed ? '펼치기' : '접기'}
+      >
+        {collapsed ? '▶' : '◀'}
+      </button>
       <div className="title-block">
         <h1>A4 이미지 분할</h1>
         <p>큰 이미지를 여러 장의 A4로 나누어 인쇄용 PDF를 만듭니다.</p>
