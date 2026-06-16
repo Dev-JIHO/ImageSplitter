@@ -1,0 +1,6 @@
+{
+  "name": "Image Studio Canvas",
+  "description": "A layout shell for an image editing studio based on the provided design system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

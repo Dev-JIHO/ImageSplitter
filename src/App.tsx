@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { ExportConfirmModal } from './components/ExportConfirmModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { initialSettings } from './constants';
@@ -17,6 +17,9 @@ import { PreviewSidebar } from './preview/PreviewSidebar';
 import { SettingsProvider } from './SettingsContext';
 import type { MobilePanel, Settings } from './types';
 
+const PANEL_MIN_PX = 220;
+const PANEL_MAX_PX = 560;
+
 export default function App() {
   const [settings, setSettings] = useState<Settings>(initialSettings);
   const [isExporting, setIsExporting] = useState(false);
@@ -25,6 +28,8 @@ export default function App() {
   const [activeMobilePanel, setActiveMobilePanel] = useState<MobilePanel>('settings');
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
+  const [leftWidth, setLeftWidth] = useState<number | null>(null);
+  const [rightWidth, setRightWidth] = useState<number | null>(null);
 
   function updateSetting<Key extends keyof Settings>(key: Key, value: Settings[Key]) {
     setSettings((current) => ({ ...current, [key]: value }));
@@ -52,6 +57,36 @@ export default function App() {
   const canPan =
     !!layoutState.layout &&
     (layoutState.layout.fitMode === 'cover' || settings.imageScale > 1);
+
+  // 좌·우 패널 너비 드래그 조절. 현재 렌더된 폭에서 시작해 포인터 이동량만큼 가감.
+  function startResize(side: 'left' | 'right', event: ReactPointerEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const selector = side === 'left' ? '.control-panel' : '.tools-panel';
+    const panel = document.querySelector(selector);
+    const startWidth = panel
+      ? panel.getBoundingClientRect().width
+      : side === 'left'
+        ? 320
+        : 280;
+    const startX = event.clientX;
+
+    const onMove = (moveEvent: globalThis.PointerEvent) => {
+      const delta = moveEvent.clientX - startX;
+      const raw = side === 'left' ? startWidth + delta : startWidth - delta;
+      const width = Math.round(Math.max(PANEL_MIN_PX, Math.min(PANEL_MAX_PX, raw)));
+      if (side === 'left') setLeftWidth(width);
+      else setRightWidth(width);
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.userSelect = 'none';
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
 
   function handleRequestExport() {
     if (!loadedImage || !preparedImage || !layoutState.plan || !layoutState.layout) return;
@@ -102,10 +137,16 @@ export default function App() {
     });
   }
 
+  const shellStyle = {
+    '--left-col': leftWidth != null && !leftCollapsed ? `${leftWidth}px` : undefined,
+    '--right-col': rightWidth != null && !rightCollapsed ? `${rightWidth}px` : undefined,
+  } as CSSProperties;
+
   return (
     <SettingsProvider value={{ settings, setSettings, updateSetting }}>
       <main
         className="app-shell"
+        style={shellStyle}
         data-left-collapsed={leftCollapsed}
         data-right-collapsed={rightCollapsed}
         aria-label="A4 이미지 분할 PDF 생성기"
@@ -123,6 +164,17 @@ export default function App() {
           onExportSeamTest={handleExportSeamTest}
         />
 
+        {!leftCollapsed ? (
+          <div
+            className="resize-handle resize-handle-left"
+            onPointerDown={(event) => startResize('left', event)}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="설정 패널 너비 조절"
+            title="드래그해 너비 조절"
+          />
+        ) : null}
+
         <PreviewPanel
           active={activeMobilePanel === 'preview'}
           image={preparedImage?.source ?? null}
@@ -130,6 +182,17 @@ export default function App() {
           layout={layoutState.layout}
           onFileSelected={handleFileChange}
         />
+
+        {!rightCollapsed ? (
+          <div
+            className="resize-handle resize-handle-right"
+            onPointerDown={(event) => startResize('right', event)}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="도구 패널 너비 조절"
+            title="드래그해 너비 조절"
+          />
+        ) : null}
 
         <PreviewSidebar
           active={activeMobilePanel === 'preview'}
