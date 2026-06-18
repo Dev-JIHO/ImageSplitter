@@ -154,28 +154,10 @@ export default function App() {
         data-right-collapsed={rightCollapsed}
         aria-label="A4 이미지 분할 PDF 생성기"
       >
-        <button
-          type="button"
-          className="panel-bookmark panel-bookmark-left"
-          onClick={() => setLeftCollapsed((value) => !value)}
-          aria-label={leftCollapsed ? '설정 패널 펼치기' : '설정 패널 접기'}
-          title={leftCollapsed ? '펼치기' : '접기'}
-        >
-          {leftCollapsed ? '»' : '«'}
-        </button>
-        <button
-          type="button"
-          className="panel-bookmark panel-bookmark-right"
-          onClick={() => setRightCollapsed((value) => !value)}
-          aria-label={rightCollapsed ? '도구 패널 펼치기' : '도구 패널 접기'}
-          title={rightCollapsed ? '펼치기' : '접기'}
-        >
-          {rightCollapsed ? '«' : '»'}
-        </button>
-
         <SettingsPanel
           active={activeMobilePanel !== 'preview'}
           collapsed={leftCollapsed}
+          onToggleCollapse={() => setLeftCollapsed((value) => !value)}
           onStartTour={onboarding.start}
           loadedImage={loadedImage}
           imageError={imageError}
@@ -219,6 +201,7 @@ export default function App() {
         <PreviewSidebar
           active={activeMobilePanel === 'preview'}
           collapsed={rightCollapsed}
+          onToggleCollapse={() => setRightCollapsed((value) => !value)}
           ready={ready}
           canPan={canPan}
           isExporting={isExporting}

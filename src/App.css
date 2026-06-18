@@ -166,28 +166,31 @@ input:focus-visible {
   overflow: visible;
 }
 
-.control-panel[data-collapsed='true'] > :not(.panel-collapse-toggle),
-.tools-panel[data-collapsed='true'] > :not(.panel-collapse-toggle) {
+.control-panel[data-collapsed='true'] > :not(.panel-toggle),
+.tools-panel[data-collapsed='true'] > :not(.panel-toggle) {
   display: none;
 }
 
 .tools-panel {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
   align-self: stretch;
   padding: 1rem;
   border: 2px solid var(--c-border);
   border-radius: var(--r-md);
   background: var(--c-surface);
   box-shadow: var(--shadow-1);
-  overflow-y: auto;
+  position: relative;
+  overflow: visible;
 }
 
 .tools-panel-body {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  overflow-y: auto;
 }
 
 .tool-group {
@@ -230,13 +233,22 @@ input:focus-visible {
 .control-panel {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
   align-self: stretch;
   padding: 1rem;
   border: 2px solid var(--c-border);
   border-radius: var(--r-md);
   background: var(--c-surface);
   box-shadow: var(--shadow-1);
+  position: relative;
+  overflow: visible;
+}
+
+.panel-scroll {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
   overflow-y: auto;
 }
 
@@ -824,6 +836,7 @@ input:focus-visible {
   border-radius: 0;
   background: var(--c-surface);
   box-shadow: var(--shadow-2);
+  touch-action: none;
 }
 
 .preview-canvas.is-draggable {
@@ -969,12 +982,13 @@ input:focus-visible {
 
   .panel-collapse-toggle,
   .panel-bookmark,
+  .panel-toggle,
   .resize-handle {
     display: none;
   }
 
-  .control-panel[data-collapsed="true"] > :not(.panel-collapse-toggle),
-  .tools-panel[data-collapsed="true"] > :not(.panel-collapse-toggle) {
+  .control-panel[data-collapsed="true"] > :not(.panel-toggle),
+  .tools-panel[data-collapsed="true"] > :not(.panel-toggle) {
     display: revert;
   }
 
@@ -991,9 +1005,13 @@ input:focus-visible {
 
   .control-panel {
     align-self: stretch;
-    max-height: calc(100dvh - 5.625rem);
-    overflow: auto;
+    overflow: visible;
     padding: 1rem;
+  }
+
+  .panel-scroll,
+  .tools-panel-body {
+    overflow: visible;
   }
 
   .preview-panel {
@@ -1272,19 +1290,19 @@ input:focus-visible {
 }
 
 
-/* ===== 패널 접기 책갈피 탭 (nav 가장자리에 붙는 일체형) ===== */
-.panel-bookmark {
+/* ===== 패널 접기 토글 (nav 가장자리에서 볼록 튀어나온 일체형 탭) ===== */
+.panel-toggle {
   position: absolute;
-  top: 2rem;
+  top: 2.25rem;
   z-index: 7;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.125rem;
-  height: 2.75rem;
+  width: 1.5rem;
+  height: 1.875rem;
   padding: 0;
-  border: 2px solid var(--c-border);
   background: var(--c-surface);
+  border: 2px solid var(--c-border);
   color: var(--c-text-2);
   font-size: 0.8125rem;
   font-weight: var(--w-extrabold);
@@ -1292,20 +1310,20 @@ input:focus-visible {
   transition: color var(--dur) var(--ease);
 }
 
-.panel-bookmark:hover {
+.panel-toggle:hover {
   color: var(--c-brand-strong);
 }
 
-/* 좌측 nav 오른쪽 가장자리에 이어 붙는다(겹치지 않음 → 스크롤바 안 가림). */
-.panel-bookmark-left {
-  left: calc(1.25rem + var(--left-col, 20rem));
+/* 좌측 패널 오른쪽 가장자리에서 거터로 볼록. 패널 테두리를 덮어 이음매 없이 일체화. */
+.control-panel .panel-toggle {
+  left: 100%;
   border-left: 0;
-  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  border-radius: 0 0.6rem 0.6rem 0;
 }
 
-/* 우측 nav 왼쪽 가장자리에 이어 붙는다. */
-.panel-bookmark-right {
-  right: calc(1.25rem + var(--right-col, 17.5rem));
+/* 우측 패널 왼쪽 가장자리에서 거터로 볼록. */
+.tools-panel .panel-toggle {
+  right: 100%;
   border-right: 0;
-  border-radius: var(--r-sm) 0 0 var(--r-sm);
+  border-radius: 0.6rem 0 0 0.6rem;
 }
