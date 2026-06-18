@@ -1344,19 +1344,19 @@ input:focus-visible {
   width: 1.875rem;
   height: 2.375rem;
   padding: 0;
-  background: var(--c-surface);
-  border: 2px solid var(--c-border);
-  color: var(--c-text-2);
+  background: var(--c-brand);
+  border: 2px solid var(--c-brand);
+  color: #fff;
   font-size: 0.8125rem;
   font-weight: var(--w-extrabold);
   box-shadow: none;
   overflow: hidden;
   white-space: nowrap;
-  transition: color var(--dur) var(--ease), width var(--dur) var(--ease);
+  transition: background-color var(--dur) var(--ease), width var(--dur) var(--ease);
 }
 
 .panel-toggle:hover {
-  color: var(--c-brand-strong);
+  background: var(--c-brand-strong);
 }
 
 /* 좌측 패널 오른쪽 가장자리에서 거터로 볼록. 패널 테두리를 덮어 이음매 없이 일체화. */
