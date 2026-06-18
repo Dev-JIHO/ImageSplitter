@@ -15,7 +15,7 @@ export function SeamTestSection({
 
   return (
     <details className="options-group seam-test-group">
-      <summary>시작 전에 프린터 테스트하기 (선택 · 권장)</summary>
+      <summary>시작 전에 프린터 테스트하기 (권장)</summary>
       <div className="options-group-body">
         <p className="hint-text">
           포스터를 만들기 전에 A4 2장을 인쇄해 붙여보고, 크기가 정확한지(100mm
@@ -23,7 +23,7 @@ export function SeamTestSection({
           있습니다. 이미지가 없어도 만들 수 있습니다.
         </p>
         <button type="button" className="secondary-button" onClick={onExportSeamTest}>
-          접합 테스트 PDF 받기 (A4 2장)
+          테스트 PDF 받기 (A4 2장)
         </button>
         {hasSeamTestExported || settings.measuredSquareMm !== 100 ? (
           <>

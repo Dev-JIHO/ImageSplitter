@@ -11,7 +11,6 @@ import { Summary } from './Summary';
 export function SettingsPanel({
   active,
   collapsed,
-  onToggleCollapse,
   onStartTour,
   loadedImage,
   imageError,
@@ -23,7 +22,6 @@ export function SettingsPanel({
 }: {
   active: boolean;
   collapsed: boolean;
-  onToggleCollapse: () => void;
   onStartTour: () => void;
   loadedImage: LoadedImage | null;
   imageError: string;
@@ -42,19 +40,9 @@ export function SettingsPanel({
       data-collapsed={collapsed}
       aria-label="분할 설정"
     >
-      <button
-        type="button"
-        className="panel-collapse-toggle"
-        onClick={onToggleCollapse}
-        aria-label={collapsed ? '설정 패널 펼치기' : '설정 패널 접기'}
-        title={collapsed ? '펼치기' : '접기'}
-      >
-        {collapsed ? '▶' : '◀'}
-      </button>
-
       <div className="title-block">
         <div className="title-row">
-          <h1>A4 이미지 분할</h1>
+          <h1>한 장 공 방</h1>
           <button
             type="button"
             className="help-button"
@@ -65,7 +53,7 @@ export function SettingsPanel({
             ?
           </button>
         </div>
-        <p>큰 이미지를 여러 장의 A4로 나누어 인쇄용 PDF를 만듭니다.</p>
+        <p>A4 용지뿐인데 저더러 그 커다란 걸 뽑으라구요..?</p>
       </div>
 
       <ImageUploadSection

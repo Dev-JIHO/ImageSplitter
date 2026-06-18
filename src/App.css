@@ -952,11 +952,12 @@ input:focus-visible {
   .app-shell[data-left-collapsed="true"][data-right-collapsed="true"] {
     grid-template-columns: 1fr;
     min-height: 100dvh;
+    height: auto;
+    overflow: visible;
     padding: 0.75rem 0.75rem 4.875rem;
   }
 
-  .control-panel,
-  .preview-panel {
+  .control-panel {
     min-height: calc(100dvh - 5.625rem);
   }
 
@@ -967,6 +968,7 @@ input:focus-visible {
   }
 
   .panel-collapse-toggle,
+  .panel-bookmark,
   .resize-handle {
     display: none;
   }
@@ -1010,7 +1012,7 @@ input:focus-visible {
   .preview-legend {
     position: static;
     max-width: 100%;
-    order: 0;
+    margin-top: 0.25rem;
   }
 
   .preview-toolbar {
@@ -1039,7 +1041,6 @@ input:focus-visible {
   }
 
   .preview-canvas {
-    order: 2;
     max-height: calc(100dvh - 15.625rem);
     object-fit: contain;
   }
@@ -1268,4 +1269,42 @@ input:focus-visible {
 @keyframes onb-slide {
   0%, 100% { transform: translateX(10px); }
   50% { transform: translateX(0); }
+}
+
+
+/* ===== 패널 접기 책갈피 탭 (nav 바깥으로 튀어나온 형태) ===== */
+.panel-bookmark {
+  position: absolute;
+  top: 2rem;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 2px solid var(--c-border-2);
+  background: var(--c-surface);
+  color: var(--c-brand-strong);
+  font-size: 0.875rem;
+  font-weight: var(--w-extrabold);
+  box-shadow: var(--shadow-1);
+  transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+
+.panel-bookmark:hover {
+  background: var(--c-brand);
+  color: var(--c-surface);
+}
+
+.panel-bookmark-left {
+  left: calc(1.25rem + var(--left-col, 20rem) - 0.5rem);
+  border-left: 0;
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+
+.panel-bookmark-right {
+  right: calc(1.25rem + var(--right-col, 17.5rem) - 0.5rem);
+  border-right: 0;
+  border-radius: var(--r-sm) 0 0 var(--r-sm);
 }
