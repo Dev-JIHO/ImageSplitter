@@ -220,7 +220,9 @@ function useTargetRect(active: boolean, step: Step | undefined, useSpotlight: bo
     }
     const update = () => {
       const el = document.querySelector(`[data-tour="${step.target}"]`);
-      setRect(el ? el.getBoundingClientRect() : null);
+      // 대상이 아직 렌더되지 않았으면(화면 전환 직후) 이전 위치를 유지해
+      // 카드가 중앙으로 튀었다가 이동하는 깜빡임을 방지한다.
+      if (el) setRect(el.getBoundingClientRect());
     };
     update();
     const timer = window.setTimeout(update, 60);

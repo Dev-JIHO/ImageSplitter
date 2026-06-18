@@ -8,7 +8,6 @@ import { ImageUploadSection } from './ImageUploadSection';
 import { PrintOptionsSection } from './PrintOptionsSection';
 import { SeamTestSection } from './SeamTestSection';
 import { SizingModeSection } from './SizingModeSection';
-import { Summary } from './Summary';
 
 function PhotoIcon() {
   return (
@@ -216,13 +215,6 @@ export function SettingsPanel({
         <p className="print-note">
           인쇄 창에서 반드시 실제 크기 또는 100%를 선택하고, 용지에 맞춤은 꺼주세요.
         </p>
-
-        <Summary
-          plan={layoutState.plan}
-          layout={layoutState.layout}
-          targetSize={layoutState.targetSize}
-          error={layoutState.error}
-        />
 
         <p className="hint-text export-hint">
           포스터가 준비되면 오른쪽 도구의 “PDF 내보내기”로 저장하세요. (모바일은 아래 “미리보기” 탭에서)

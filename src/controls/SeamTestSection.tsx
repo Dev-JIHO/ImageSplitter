@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NumberField } from '../components/NumberField';
 import type { ResolvedPrintScale } from '../lib/printScale';
 import { useSettings } from '../SettingsContext';
@@ -12,9 +13,18 @@ export function SeamTestSection({
   onExportSeamTest: () => void;
 }) {
   const { settings, updateSetting } = useSettings();
+  // 이미 테스트를 받았거나 보정값이 입력된 상태면, 측정값 입력란이 보이도록 펼친 채로 시작한다.
+  // (배너에서 테스트를 받고 넘어온 경우 다시 받지 않아도 바로 입력 가능)
+  const [open, setOpen] = useState(
+    hasSeamTestExported || settings.measuredSquareMm !== 100,
+  );
 
   return (
-    <details className="options-group seam-test-group">
+    <details
+      className="options-group seam-test-group"
+      open={open}
+      onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}
+    >
       <summary>시작 전에 프린터 테스트하기 (권장)</summary>
       <div className="options-group-body">
         <p className="hint-text">
