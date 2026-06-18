@@ -1,3 +1,4 @@
+import { Chevron } from '../components/Chevron';
 import { normalizeRotation } from '../lib/num';
 import { useSettings } from '../SettingsContext';
 
@@ -37,7 +38,7 @@ export function PreviewSidebar({
         aria-label={collapsed ? '도구 패널 펼치기' : '도구 패널 접기'}
         title={collapsed ? '펼치기' : '접기'}
       >
-        {collapsed ? '«' : '»'}
+        {collapsed ? <Chevron dir="left" /> : <Chevron dir="right" />}
       </button>
       <div className="tools-panel-body">
         {ready ? (

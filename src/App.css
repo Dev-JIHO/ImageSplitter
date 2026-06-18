@@ -36,6 +36,7 @@
   --c-success: #b5e48c;
   --c-purple: #cdb4db;
   /* Radius */
+  --r-xs: 10px;
   --r-sm: 16px;
   --r-md: 24px;
   --r-pill: 9999px;
@@ -250,6 +251,7 @@ input:focus-visible {
   flex-direction: column;
   gap: 1.25rem;
   overflow-y: auto;
+  scrollbar-gutter: stable both-edges;
 }
 
 .step-heading {
@@ -482,7 +484,7 @@ input:focus-visible {
   grid-template-columns: 1fr 1fr;
   gap: 0.25rem;
   margin: 0;
-  padding: 0.25rem;
+  padding: 0.375rem;
   border: none;
   border-radius: var(--r-sm);
   background: var(--c-sunken);
@@ -500,7 +502,7 @@ input:focus-visible {
   min-height: unset;
   padding: 0.375rem;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--r-xs);
   font-size: 0.9375rem;
   font-weight: bold;
   cursor: pointer;
@@ -1322,12 +1324,12 @@ input:focus-visible {
 .control-panel .panel-toggle {
   left: 100%;
   border-left: 0;
-  border-radius: 0 0.6rem 0.6rem 0;
+  border-radius: 0 var(--r-xs) var(--r-xs) 0;
 }
 
 /* 우측 패널 왼쪽 가장자리에서 거터로 볼록. */
 .tools-panel .panel-toggle {
   right: 100%;
   border-right: 0;
-  border-radius: 0.6rem 0 0 0.6rem;
+  border-radius: var(--r-xs) 0 0 var(--r-xs);
 }
