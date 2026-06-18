@@ -133,18 +133,16 @@ export function SettingsPanel({
 
       <div className="panel-scroll">
         <div className="title-block">
-          <div className="title-row">
-            <h1>한 장 공 방</h1>
-            <button
-              type="button"
-              className="help-button"
-              onClick={onStartTour}
-              aria-label="사용법 안내 다시 보기"
-              title="사용법 안내"
-            >
-              ?
-            </button>
-          </div>
+          <h1>한 장 공 방</h1>
+          <button
+            type="button"
+            className="help-button"
+            onClick={onStartTour}
+            aria-label="사용법 안내 다시 보기"
+            title="사용법 안내"
+          >
+            ?
+          </button>
           <p>A4 용지뿐인데 저더러 그 커다란 걸 뽑으라구요..?</p>
         </div>
 
