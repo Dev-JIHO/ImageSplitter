@@ -292,7 +292,6 @@ input:focus-visible {
 }
 
 .title-block {
-  position: relative;
   padding-bottom: 1rem;
   border-bottom: 1px solid var(--c-border-soft);
   margin-bottom: -0.25rem;
@@ -1032,6 +1031,16 @@ input:focus-visible {
     padding: 0.625rem 0.5rem;
   }
 
+  /* 모바일: 물음표 버튼을 제목 영역(탭 바 아래) 기준으로 두어 겹침 방지. */
+  .app-shell .title-block {
+    position: relative;
+  }
+
+  .app-shell .help-button {
+    top: 0.25rem;
+    right: 0.25rem;
+  }
+
   .control-panel[data-collapsed="true"] > :not(.panel-toggle),
   .tools-panel[data-collapsed="true"] > :not(.panel-toggle) {
     display: revert;
@@ -1175,8 +1184,8 @@ input:focus-visible {
 
 .help-button {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: 0.75rem;
+  right: 0.75rem;
   width: 1.75rem;
   height: 1.75rem;
   border-radius: var(--r-pill);
