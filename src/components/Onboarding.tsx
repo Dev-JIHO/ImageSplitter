@@ -1,4 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react';
+import type { LeftView } from '../types';
 
 type Art = 'intro' | 'upload' | 'size' | 'preview' | 'tools' | 'tip';
 
@@ -8,6 +9,8 @@ interface Step {
   art: Art;
   title: string;
   body: string;
+  /** 이 단계에서 좌측 패널을 이 화면으로 전환한다. */
+  view?: LeftView;
 }
 
 const STEPS: Step[] = [
@@ -19,30 +22,40 @@ const STEPS: Step[] = [
   },
   {
     kind: 'spot',
+    target: 'views',
+    art: 'intro',
+    title: '1. 화면 전환 탭',
+    body: '왼쪽의 세 탭으로 “사진 선택 · 포스터 설정 · 고급 설정” 화면을 오갈 수 있어요.',
+    view: 'upload',
+  },
+  {
+    kind: 'spot',
     target: 'upload',
     art: 'upload',
-    title: '1. 이미지 올리기',
+    title: '2. 이미지 올리기',
     body: '사진을 선택하거나, 미리보기로 끌어다 놓거나, Ctrl+V로 붙여넣으세요.',
+    view: 'upload',
   },
   {
     kind: 'spot',
     target: 'size',
     art: 'size',
-    title: '2. 포스터 크기 정하기',
+    title: '3. 포스터 크기 정하기',
     body: '“A4 장수”로 직접 정하거나, “완성 크기(mm)”로 정확히 — 둘 중 선택.',
+    view: 'poster',
   },
   {
     kind: 'spot',
     target: 'preview',
     art: 'preview',
-    title: '3. 미리보기로 확인·조정',
+    title: '4. 미리보기로 확인·조정',
     body: '분할 결과를 실시간 확인. 휠·슬라이더로 확대, 드래그로 위치를 맞춰요.',
   },
   {
     kind: 'spot',
     target: 'tools',
     art: 'tools',
-    title: '4. 도구와 PDF 내보내기',
+    title: '5. 도구와 PDF 내보내기',
     body: '오른쪽 도구에서 회전·확대·위치를 조정하고 “PDF 내보내기”로 저장.',
   },
   {
@@ -50,6 +63,7 @@ const STEPS: Step[] = [
     art: 'tip',
     title: '인쇄·조립 팁',
     body: '인쇄는 반드시 100%로! 1-1부터 풀칠(빗금) 영역 위에 겹쳐 순서대로 붙이세요.',
+    view: 'upload',
   },
 ];
 
@@ -197,17 +211,23 @@ export function Onboarding({
   onNext,
   onPrev,
   onClose,
+  onViewChange,
 }: {
   active: boolean;
   step: number;
   onNext: () => void;
   onPrev: () => void;
   onClose: () => void;
+  onViewChange: (view: LeftView) => void;
 }) {
   const useSpotlight =
     typeof window !== 'undefined' && !window.matchMedia('(max-width: 860px)').matches;
   const current = STEPS[step];
   const rect = useTargetRect(active, current, useSpotlight);
+
+  useEffect(() => {
+    if (active && current?.view) onViewChange(current.view);
+  }, [active, current, onViewChange]);
 
   if (!active || !current) return null;
 
@@ -216,6 +236,9 @@ export function Onboarding({
   const vw = typeof window !== 'undefined' ? window.innerWidth : 1280;
   const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
   const cardW = Math.min(360, vw - 24);
+
+  const spotSteps = STEPS.filter((item) => item.kind === 'spot');
+  const spotIndex = current.kind === 'spot' ? spotSteps.indexOf(current) + 1 : 0;
 
   const targetTall = !!rect && rect.height > vh * 0.5;
   const useCenter = !rect || targetTall;
@@ -250,7 +273,7 @@ export function Onboarding({
         style={cardStyle}
       >
         <Illustration art={current.art} />
-        <p className="onb-step">{current.kind === 'spot' ? `${step} / 4` : '안내'}</p>
+        <p className="onb-step">{current.kind === 'spot' ? `${spotIndex} / ${spotSteps.length}` : '안내'}</p>
         <h2 className="onb-title">{current.title}</h2>
         <p className="onb-body">{current.body}</p>
         <div className="onb-actions">

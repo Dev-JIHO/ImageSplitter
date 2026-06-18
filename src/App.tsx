@@ -17,7 +17,7 @@ import { exportSeamTestPdf } from './lib/seamTestPdf';
 import { PreviewPanel } from './preview/PreviewPanel';
 import { PreviewSidebar } from './preview/PreviewSidebar';
 import { SettingsProvider } from './SettingsContext';
-import type { MobilePanel, Settings } from './types';
+import type { LeftView, MobilePanel, Settings } from './types';
 
 const PANEL_MIN_PX = 220;
 const PANEL_MAX_PX = 560;
@@ -31,6 +31,7 @@ export default function App() {
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const [leftWidth, setLeftWidth] = useState<number | null>(null);
+  const [leftView, setLeftView] = useState<LeftView>('upload');
   const [rightWidth, setRightWidth] = useState<number | null>(null);
   const onboarding = useOnboarding();
 
@@ -158,6 +159,8 @@ export default function App() {
           active={activeMobilePanel !== 'preview'}
           collapsed={leftCollapsed}
           onToggleCollapse={() => setLeftCollapsed((value) => !value)}
+          view={leftView}
+          onViewChange={setLeftView}
           onStartTour={onboarding.start}
           loadedImage={loadedImage}
           imageError={imageError}
@@ -232,6 +235,7 @@ export default function App() {
           onNext={onboarding.next}
           onPrev={onboarding.prev}
           onClose={onboarding.close}
+          onViewChange={setLeftView}
         />
       </main>
     </SettingsProvider>
