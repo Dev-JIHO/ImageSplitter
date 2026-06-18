@@ -3,6 +3,7 @@ import { Chevron } from '../components/Chevron';
 import type { LoadedImage } from '../lib/imageLoader';
 import type { ResolvedPrintScale } from '../lib/printScale';
 import type { LayoutState, LeftView } from '../types';
+import { DisplayOptionsSection } from './DisplayOptionsSection';
 import { FitAndOverlapSection } from './FitAndOverlapSection';
 import { ImageUploadSection } from './ImageUploadSection';
 import { PrintOptionsSection } from './PrintOptionsSection';
@@ -146,7 +147,7 @@ export function SettingsPanel({
           <p>A4 용지뿐인데 저더러 그 커다란 걸 뽑으라구요..?</p>
         </div>
 
-        {view !== 'advanced' ? (
+        {view === 'upload' ? (
           <div className="test-print-callout" data-tour="testprint">
             <div className="test-print-callout-text">
               <strong>인쇄 전, 테스트부터!</strong>
@@ -198,15 +199,16 @@ export function SettingsPanel({
             <>
               <div className="advanced-heading">
                 <strong>고급 설정</strong>
-                <span>여백 · 풀칠 · 해상도 · 프린터 테스트 (선택)</span>
+                <span>프린터 테스트 · 풀칠 · 인쇄 품질 · 표시 (선택)</span>
               </div>
-              <FitAndOverlapSection />
-              <PrintOptionsSection />
               <SeamTestSection
                 printScale={printScale}
                 hasSeamTestExported={hasSeamTestExported}
                 onExportSeamTest={onExportSeamTest}
               />
+              <FitAndOverlapSection />
+              <PrintOptionsSection />
+              <DisplayOptionsSection />
             </>
           ) : null}
         </div>

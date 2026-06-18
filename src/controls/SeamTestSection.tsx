@@ -13,24 +13,21 @@ export function SeamTestSection({
   onExportSeamTest: () => void;
 }) {
   const { settings, updateSetting } = useSettings();
-  // 이미 테스트를 받았거나 보정값이 입력된 상태면, 측정값 입력란이 보이도록 펼친 채로 시작한다.
-  // (배너에서 테스트를 받고 넘어온 경우 다시 받지 않아도 바로 입력 가능)
-  const [open, setOpen] = useState(
-    hasSeamTestExported || settings.measuredSquareMm !== 100,
-  );
+  // 가장 권장되는 항목이라 기본으로 펼친다.
+  const [open, setOpen] = useState(true);
 
   return (
     <details
-      className="options-group seam-test-group"
+      className="options-group"
       open={open}
       onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}
     >
-      <summary>시작 전에 프린터 테스트하기 (권장)</summary>
+      <summary>프린터 테스트 · 크기 보정 (권장)</summary>
       <div className="options-group-body">
         <p className="hint-text">
           포스터를 만들기 전에 A4 2장을 인쇄해 붙여보고, 크기가 정확한지(100mm
           사각형)와 이음새가 매끄럽게 이어지는지(눈금·원·사선)를 확인할 수
-          있습니다. 이미지가 없어도 만들 수 있습니다.
+          있습니다. 사진이 없어도 만들 수 있습니다.
         </p>
         <button type="button" className="secondary-button" onClick={onExportSeamTest}>
           테스트 PDF 받기 (A4 2장)

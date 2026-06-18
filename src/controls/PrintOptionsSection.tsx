@@ -6,7 +6,7 @@ export function PrintOptionsSection() {
 
   return (
     <details className="options-group">
-      <summary>인쇄 옵션 (여백 · 해상도 · 표시 항목)</summary>
+      <summary>인쇄 품질 (여백 · 해상도)</summary>
       <div className="options-group-body">
         <fieldset className="segmented segmented-three">
           <legend>여백 설정</legend>
@@ -52,34 +52,7 @@ export function PrintOptionsSection() {
             </button>
           ))}
         </fieldset>
-        <p className="hint-text">
-          300 DPI는 더 선명하지만 PDF 생성이 느려질 수 있습니다.
-        </p>
-
-        <label className="check-field">
-          <input
-            type="checkbox"
-            checked={settings.showPageNumbers}
-            onChange={(event) => updateSetting('showPageNumbers', event.target.checked)}
-          />
-          <span>페이지 번호 표시</span>
-        </label>
-        <label className="check-field">
-          <input
-            type="checkbox"
-            checked={settings.showPageBoundaries}
-            onChange={(event) => updateSetting('showPageBoundaries', event.target.checked)}
-          />
-          <span>페이지 경계선 표시</span>
-        </label>
-        <label className="check-field">
-          <input
-            type="checkbox"
-            checked={settings.showGlueMarks}
-            onChange={(event) => updateSetting('showGlueMarks', event.target.checked)}
-          />
-          <span>풀칠 영역 표시</span>
-        </label>
+        <p className="hint-text">300 DPI는 더 선명하지만 PDF 생성이 느려질 수 있습니다.</p>
       </div>
     </details>
   );
