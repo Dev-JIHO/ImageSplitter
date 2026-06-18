@@ -1,3 +1,4 @@
+import { Chevron } from '../components/Chevron';
 import type { LoadedImage } from '../lib/imageLoader';
 import type { ResolvedPrintScale } from '../lib/printScale';
 import type { LayoutState } from '../types';
@@ -49,7 +50,7 @@ export function SettingsPanel({
         aria-label={collapsed ? '설정 패널 펼치기' : '설정 패널 접기'}
         title={collapsed ? '펼치기' : '접기'}
       >
-        {collapsed ? '»' : '«'}
+        {collapsed ? <Chevron dir="right" /> : <Chevron dir="left" />}
       </button>
       <div className="panel-scroll">
       <div className="title-block">
