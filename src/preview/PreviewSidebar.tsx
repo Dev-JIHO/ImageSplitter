@@ -6,6 +6,7 @@ const MAX_ZOOM = 8;
 export function PreviewSidebar({
   active,
   collapsed,
+  onToggleCollapse,
   ready,
   canPan,
   isExporting,
@@ -13,6 +14,7 @@ export function PreviewSidebar({
 }: {
   active: boolean;
   collapsed: boolean;
+  onToggleCollapse: () => void;
   ready: boolean;
   canPan: boolean;
   isExporting: boolean;
@@ -28,6 +30,15 @@ export function PreviewSidebar({
       data-tour="tools"
       aria-label="미리보기 도구"
     >
+      <button
+        type="button"
+        className="panel-toggle"
+        onClick={onToggleCollapse}
+        aria-label={collapsed ? '도구 패널 펼치기' : '도구 패널 접기'}
+        title={collapsed ? '펼치기' : '접기'}
+      >
+        {collapsed ? '«' : '»'}
+      </button>
       <div className="tools-panel-body">
         {ready ? (
           <>

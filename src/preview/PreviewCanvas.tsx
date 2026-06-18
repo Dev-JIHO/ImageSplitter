@@ -23,7 +23,7 @@ export function PreviewCanvas({
   }, [image, plan, layout, settings]);
 
   useCanvasZoom(canvasRef, true, setSettings);
-  const dragHandlers = useCropDrag(plan, layout, settings, updateSetting);
+  const dragHandlers = useCropDrag(plan, layout, settings, updateSetting, setSettings);
 
   return (
     <canvas

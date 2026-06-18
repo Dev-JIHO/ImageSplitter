@@ -11,6 +11,7 @@ import { Summary } from './Summary';
 export function SettingsPanel({
   active,
   collapsed,
+  onToggleCollapse,
   onStartTour,
   loadedImage,
   imageError,
@@ -22,6 +23,7 @@ export function SettingsPanel({
 }: {
   active: boolean;
   collapsed: boolean;
+  onToggleCollapse: () => void;
   onStartTour: () => void;
   loadedImage: LoadedImage | null;
   imageError: string;
@@ -40,6 +42,16 @@ export function SettingsPanel({
       data-collapsed={collapsed}
       aria-label="분할 설정"
     >
+      <button
+        type="button"
+        className="panel-toggle"
+        onClick={onToggleCollapse}
+        aria-label={collapsed ? '설정 패널 펼치기' : '설정 패널 접기'}
+        title={collapsed ? '펼치기' : '접기'}
+      >
+        {collapsed ? '»' : '«'}
+      </button>
+      <div className="panel-scroll">
       <div className="title-block">
         <div className="title-row">
           <h1>한 장 공 방</h1>
@@ -92,6 +104,7 @@ export function SettingsPanel({
         targetSize={layoutState.targetSize}
         error={layoutState.error}
       />
+      </div>
     </section>
   );
 }
