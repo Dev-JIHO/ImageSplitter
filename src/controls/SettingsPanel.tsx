@@ -1,4 +1,5 @@
-import { type KeyboardEvent, type ReactElement } from 'react';
+import { useState, type KeyboardEvent, type ReactElement } from 'react';
+import { AdvancedHelpModal } from '../components/AdvancedHelpModal';
 import { Chevron } from '../components/Chevron';
 import type { LoadedImage } from '../lib/imageLoader';
 import type { ResolvedPrintScale } from '../lib/printScale';
@@ -70,6 +71,7 @@ export function SettingsPanel({
   onExportSeamTest: () => void;
 }) {
   const settingsReady = !!loadedImage && !layoutState.error;
+  const [advHelpOpen, setAdvHelpOpen] = useState(false);
 
   const tabs: Array<{ id: LeftView; label: string; icon: ReactElement }> = [
     { id: 'upload', label: '사진 선택', icon: <PhotoIcon /> },
@@ -198,7 +200,18 @@ export function SettingsPanel({
           {view === 'advanced' ? (
             <>
               <div className="advanced-heading">
-                <strong>고급 설정</strong>
+                <div className="advanced-heading-top">
+                  <strong>고급 설정</strong>
+                  <button
+                    type="button"
+                    className="adv-help-button"
+                    onClick={() => setAdvHelpOpen(true)}
+                    aria-label="고급 설정 설명 보기"
+                    title="고급 설정 설명"
+                  >
+                    ?
+                  </button>
+                </div>
                 <span>프린터 테스트 · 풀칠 · 인쇄 품질 · 표시 (선택)</span>
               </div>
               <SeamTestSection
@@ -221,6 +234,8 @@ export function SettingsPanel({
           포스터가 준비되면 오른쪽 도구의 “PDF 내보내기”로 저장하세요. (모바일은 아래 “미리보기” 탭에서)
         </p>
       </div>
+
+      {advHelpOpen ? <AdvancedHelpModal onClose={() => setAdvHelpOpen(false)} /> : null}
     </section>
   );
 }
