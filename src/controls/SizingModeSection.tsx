@@ -7,7 +7,7 @@ export function SizingModeSection() {
   return (
     <>
       <fieldset className="segmented" data-tour="size">
-        <legend>어떻게 크게 만들까요?</legend>
+        <legend>어떻게 만들까요?</legend>
         <button
           type="button"
           className={settings.mode === 'manual' ? 'active' : ''}
@@ -30,7 +30,7 @@ export function SizingModeSection() {
       {settings.mode === 'manual' ? (
         <>
           <fieldset className="segmented">
-            <legend>A4 방향</legend>
+            <legend>용지 방향</legend>
             <button
               type="button"
               className={settings.orientation === 'portrait' ? 'active' : ''}

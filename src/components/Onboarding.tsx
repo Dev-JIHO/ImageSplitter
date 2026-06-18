@@ -25,7 +25,7 @@ const STEPS: Step[] = [
     target: 'views',
     art: 'intro',
     title: '1. 화면 전환 탭',
-    body: '왼쪽의 세 탭으로 “사진 선택 · 포스터 설정 · 고급 설정” 화면을 오갈 수 있어요.',
+    body: '왼쪽의 세 탭으로 “사진 선택 · 포스터 설정 · 고급 설정” 화면을 전환해요. 맨 위 «« 버튼을 누르면 설정 패널을 접어 미리보기를 넓게 볼 수 있어요.',
     view: 'upload',
   },
   {
@@ -276,7 +276,10 @@ export function Onboarding({
 
   let cardStyle: CSSProperties = {};
   if (spotlight && !useCenter) {
-    const left = Math.min(Math.max(12, spotlight.left), vw - cardW - 12);
+    const left = Math.min(
+      Math.max(12, spotlight.left + spotlight.width / 2 - cardW / 2),
+      vw - cardW - 12,
+    );
     const spaceBelow = vh - spotlight.bottom;
     cardStyle =
       spaceBelow > 260
