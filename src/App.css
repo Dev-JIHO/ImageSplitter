@@ -91,7 +91,7 @@ input:focus-visible {
 }
 
 .app-shell {
-  --left-col: 20rem;
+  --left-col: 23rem;
   --right-col: 17.5rem;
   position: relative;
   display: grid;
@@ -1175,8 +1175,8 @@ input:focus-visible {
 
 .help-button {
   position: absolute;
-  top: -0.25rem;
-  right: -0.25rem;
+  top: 0;
+  right: 0;
   width: 1.75rem;
   height: 1.75rem;
   border-radius: var(--r-pill);
