@@ -1015,9 +1015,19 @@ input:focus-visible {
   }
 
   .app-shell .panel-view-tab-label {
-    display: inline;
+    display: inline-block;
+    max-width: none;
+    opacity: 1;
+    margin-left: 0;
     font-weight: var(--w-bold);
     font-size: 0.875rem;
+  }
+
+  /* 모바일 탭은 항상 가로 펼침 상태이므로 hover 변형을 무력화. */
+  .app-shell .panel-view-tab:hover,
+  .app-shell .panel-view-tab:focus-visible {
+    justify-content: center;
+    padding: 0.625rem 0.5rem;
   }
 
   .control-panel[data-collapsed="true"] > :not(.panel-toggle),
@@ -1398,5 +1408,35 @@ input:focus-visible {
 }
 
 .panel-view-tab-label {
-  display: none;
+  display: inline-block;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition:
+    max-width var(--dur) var(--ease),
+    opacity var(--dur) var(--ease),
+    margin-left var(--dur) var(--ease);
+}
+
+.panel-view-tab:hover,
+.panel-view-tab:focus-visible {
+  width: auto;
+  justify-content: flex-start;
+  padding: 0 0.55rem;
+}
+
+.panel-view-tab:hover .panel-view-tab-label,
+.panel-view-tab:focus-visible .panel-view-tab-label {
+  max-width: 6rem;
+  opacity: 1;
+  margin-left: 0.35rem;
+}
+
+/* 고급 화면 하위 섹션 제목 (details summary와 위계 통일) */
+.subsection-label {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: var(--w-extrabold);
+  color: var(--c-text);
 }
