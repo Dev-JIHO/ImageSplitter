@@ -96,6 +96,7 @@ input:focus-visible {
   position: relative;
   display: grid;
   grid-template-columns: var(--left-col) 1fr var(--right-col);
+  grid-template-rows: minmax(0, 1fr);
   gap: 1.25rem;
   height: 100vh;
   padding: 1.25rem;
@@ -966,6 +967,7 @@ input:focus-visible {
   .app-shell[data-right-collapsed="true"],
   .app-shell[data-left-collapsed="true"][data-right-collapsed="true"] {
     grid-template-columns: 1fr;
+    grid-template-rows: auto;
     min-height: 100dvh;
     height: auto;
     overflow: visible;
