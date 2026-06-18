@@ -3,7 +3,9 @@ import { ExportConfirmModal } from './components/ExportConfirmModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { initialSettings } from './constants';
 import { SettingsPanel } from './controls/SettingsPanel';
+import { Onboarding } from './components/Onboarding';
 import { useImageUpload } from './hooks/useImageUpload';
+import { useOnboarding } from './hooks/useOnboarding';
 import { usePasteImage } from './hooks/usePasteImage';
 import { usePosterLayout } from './hooks/usePosterLayout';
 import { usePreparedImage } from './hooks/usePreparedImage';
@@ -30,6 +32,7 @@ export default function App() {
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const [leftWidth, setLeftWidth] = useState<number | null>(null);
   const [rightWidth, setRightWidth] = useState<number | null>(null);
+  const onboarding = useOnboarding();
 
   function updateSetting<Key extends keyof Settings>(key: Key, value: Settings[Key]) {
     setSettings((current) => ({ ...current, [key]: value }));
@@ -155,6 +158,7 @@ export default function App() {
           active={activeMobilePanel !== 'preview'}
           collapsed={leftCollapsed}
           onToggleCollapse={() => setLeftCollapsed((value) => !value)}
+          onStartTour={onboarding.start}
           loadedImage={loadedImage}
           imageError={imageError}
           onFileSelected={handleFileChange}
@@ -220,6 +224,14 @@ export default function App() {
           activePanel={activeMobilePanel}
           hasImage={!!loadedImage}
           onSelect={setActiveMobilePanel}
+        />
+
+        <Onboarding
+          active={onboarding.active}
+          step={onboarding.step}
+          onNext={onboarding.next}
+          onPrev={onboarding.prev}
+          onClose={onboarding.close}
         />
       </main>
     </SettingsProvider>

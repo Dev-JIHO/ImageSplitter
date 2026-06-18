@@ -187,11 +187,7 @@ export function drawPoster(
     context.stroke();
   }
 
-  // 격자 외곽선.
   context.setLineDash([]);
-  context.strokeStyle = 'rgba(20, 31, 45, 0.9)';
-  context.lineWidth = Math.max(1 / scale, 0.8);
-  context.strokeRect(0, 0, gridWidthMm, gridHeightMm);
 
   // 이미지가 없는 페이지: '인쇄 안 함' 표시.
   const imagePages = new Set(layout.slices.map((slice) => `${slice.row}:${slice.column}`));

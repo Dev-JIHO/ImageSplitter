@@ -12,6 +12,7 @@ export function SettingsPanel({
   active,
   collapsed,
   onToggleCollapse,
+  onStartTour,
   loadedImage,
   imageError,
   onFileSelected,
@@ -23,6 +24,7 @@ export function SettingsPanel({
   active: boolean;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  onStartTour: () => void;
   loadedImage: LoadedImage | null;
   imageError: string;
   onFileSelected: (file: File | undefined) => void;
@@ -49,16 +51,22 @@ export function SettingsPanel({
       >
         {collapsed ? '▶' : '◀'}
       </button>
+
       <div className="title-block">
-        <h1>A4 이미지 분할</h1>
+        <div className="title-row">
+          <h1>A4 이미지 분할</h1>
+          <button
+            type="button"
+            className="help-button"
+            onClick={onStartTour}
+            aria-label="사용법 안내 다시 보기"
+            title="사용법 안내"
+          >
+            ?
+          </button>
+        </div>
         <p>큰 이미지를 여러 장의 A4로 나누어 인쇄용 PDF를 만듭니다.</p>
       </div>
-
-      <SeamTestSection
-        printScale={printScale}
-        hasSeamTestExported={hasSeamTestExported}
-        onExportSeamTest={onExportSeamTest}
-      />
 
       <ImageUploadSection
         loadedImage={loadedImage}
@@ -72,8 +80,19 @@ export function SettingsPanel({
       </div>
 
       <SizingModeSection />
+
+      <div className="advanced-heading">
+        <strong>고급 설정</strong>
+        <span>여백 · 풀칠 · 해상도 · 프린터 테스트 (선택)</span>
+      </div>
+
       <FitAndOverlapSection />
       <PrintOptionsSection />
+      <SeamTestSection
+        printScale={printScale}
+        hasSeamTestExported={hasSeamTestExported}
+        onExportSeamTest={onExportSeamTest}
+      />
 
       <p className="print-note">
         인쇄 창에서 반드시 실제 크기 또는 100%를 선택하고, 용지에 맞춤은 꺼주세요.
