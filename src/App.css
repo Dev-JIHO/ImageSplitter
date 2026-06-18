@@ -1359,6 +1359,19 @@ input:focus-visible {
   background: var(--c-brand-strong);
 }
 
+/* 펼치기(접힘) 상태에서는 토글을 하얀색으로. */
+.control-panel[data-collapsed='true'] .panel-toggle,
+.tools-panel[data-collapsed='true'] .panel-toggle {
+  background: var(--c-surface);
+  border-color: var(--c-border);
+  color: var(--c-brand-strong);
+}
+
+.control-panel[data-collapsed='true'] .panel-toggle:hover,
+.tools-panel[data-collapsed='true'] .panel-toggle:hover {
+  background: var(--c-subtle);
+}
+
 /* 좌측 패널 오른쪽 가장자리에서 거터로 볼록. 패널 테두리를 덮어 이음매 없이 일체화. */
 .control-panel .panel-toggle {
   left: 100%;
