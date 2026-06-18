@@ -19,7 +19,7 @@ export function Summary({
   }
 
   if (!plan || !layout) {
-    return <p className="hint-text">이미지를 업로드하고 설정을 입력해주세요.</p>;
+    return <p className="hint-text">사진을 올리고 설정을 입력해주세요.</p>;
   }
 
   const totalPages = plan.rows * plan.columns;
@@ -28,7 +28,7 @@ export function Summary({
   return (
     <dl className="summary">
       <div>
-        <dt>추천/설정</dt>
+        <dt>용지·격자</dt>
         <dd>{plan.orientation === 'portrait' ? 'A4 세로' : 'A4 가로'} · {plan.rows}행 x {plan.columns}열</dd>
       </div>
       <div>
@@ -39,11 +39,11 @@ export function Summary({
         </dd>
       </div>
       <div>
-        <dt>팔레트</dt>
+        <dt>포스터 영역</dt>
         <dd>{round(plan.totalWidthMm)} x {round(plan.totalHeightMm)}mm</dd>
       </div>
       <div>
-        <dt>이미지 배치</dt>
+        <dt>사진 배치</dt>
         <dd>{round(layout.imageFrameMm.width)} x {round(layout.imageFrameMm.height)}mm</dd>
       </div>
       {targetSize ? (
