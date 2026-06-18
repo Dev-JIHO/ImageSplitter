@@ -1499,3 +1499,10 @@ input:focus-visible {
   font-weight: var(--w-extrabold);
   color: var(--c-brand-strong);
 }
+
+/* 화면(view) 내부 요소 간격 — 패널 리듬과 동일하게 */
+.view-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}

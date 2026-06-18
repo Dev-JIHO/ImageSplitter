@@ -1,6 +1,8 @@
 import { Chevron } from '../components/Chevron';
+import { Summary } from '../controls/Summary';
 import { normalizeRotation } from '../lib/num';
 import { useSettings } from '../SettingsContext';
+import type { LayoutState } from '../types';
 
 const MAX_ZOOM = 8;
 
@@ -12,6 +14,7 @@ export function PreviewSidebar({
   canPan,
   isExporting,
   onRequestExport,
+  layoutState,
 }: {
   active: boolean;
   collapsed: boolean;
@@ -20,6 +23,7 @@ export function PreviewSidebar({
   canPan: boolean;
   isExporting: boolean;
   onRequestExport: () => void;
+  layoutState: LayoutState;
 }) {
   const { settings, updateSetting, setSettings } = useSettings();
 
@@ -122,6 +126,13 @@ export function PreviewSidebar({
             <p className="hint-text small">
               인쇄 후 1-1부터 행 순서대로, 빗금(풀칠) 영역 위에 이웃 장을 겹쳐 붙이세요.
             </p>
+
+            <Summary
+              plan={layoutState.plan}
+              layout={layoutState.layout}
+              targetSize={layoutState.targetSize}
+              error={layoutState.error}
+            />
           </>
         ) : (
           <p className="hint-text">

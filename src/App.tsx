@@ -209,6 +209,7 @@ export default function App() {
           canPan={canPan}
           isExporting={isExporting}
           onRequestExport={handleRequestExport}
+          layoutState={layoutState}
         />
 
         {isConfirmOpen && layoutState.plan && layoutState.layout ? (
