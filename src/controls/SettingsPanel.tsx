@@ -11,7 +11,7 @@ import { SizingModeSection } from './SizingModeSection';
 
 function PhotoIcon() {
   return (
-    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden focusable="false">
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden focusable="false">
       <rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth={1.5} />
       <circle cx="6" cy="6.5" r="1.1" fill="currentColor" />
       <path d="M3 12L6.5 8.5L9 11L11 9.5L13 11.5" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round" />
@@ -21,7 +21,7 @@ function PhotoIcon() {
 
 function GridIcon() {
   return (
-    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden focusable="false">
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden focusable="false">
       <rect x="2.5" y="2.5" width="11" height="11" rx="1.6" fill="none" stroke="currentColor" strokeWidth={1.5} />
       <path d="M8 2.5V13.5M2.5 8H13.5" stroke="currentColor" strokeWidth={1.5} />
     </svg>
@@ -30,7 +30,7 @@ function GridIcon() {
 
 function SlidersIcon() {
   return (
-    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden focusable="false">
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden focusable="false">
       <path d="M2 4.5H14M2 8H14M2 11.5H14" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
       <circle cx="6" cy="4.5" r="1.9" fill="var(--c-surface)" stroke="currentColor" strokeWidth={1.5} />
       <circle cx="10.5" cy="8" r="1.9" fill="var(--c-surface)" stroke="currentColor" strokeWidth={1.5} />
@@ -106,6 +106,7 @@ export function SettingsPanel({
         title={collapsed ? '펼치기' : '접기'}
       >
         {collapsed ? <Chevron dir="right" /> : <Chevron dir="left" />}
+        <span className="panel-toggle-label">{collapsed ? '펼치기' : '접기'}</span>
       </button>
       {!collapsed ? (
         <div className="panel-view-tabs" role="tablist" aria-label="설정 화면 전환" data-tour="views">
@@ -177,39 +178,39 @@ export function SettingsPanel({
           role="tabpanel"
           aria-label={viewLabel}
         >
-        {view === 'upload' ? (
-          <ImageUploadSection
-            loadedImage={loadedImage}
-            imageError={imageError}
-            onFileSelected={onFileSelected}
-          />
-        ) : null}
-
-        {view === 'poster' ? (
-          <>
-            <div className="step-heading">
-              <span className={settingsReady ? 'done' : ''}>{settingsReady ? '✓' : ''}</span>
-              <strong>포스터 설정</strong>
-            </div>
-            <SizingModeSection />
-          </>
-        ) : null}
-
-        {view === 'advanced' ? (
-          <>
-            <div className="advanced-heading">
-              <strong>고급 설정</strong>
-              <span>여백 · 풀칠 · 해상도 · 프린터 테스트 (선택)</span>
-            </div>
-            <FitAndOverlapSection />
-            <PrintOptionsSection />
-            <SeamTestSection
-              printScale={printScale}
-              hasSeamTestExported={hasSeamTestExported}
-              onExportSeamTest={onExportSeamTest}
+          {view === 'upload' ? (
+            <ImageUploadSection
+              loadedImage={loadedImage}
+              imageError={imageError}
+              onFileSelected={onFileSelected}
             />
-          </>
-        ) : null}
+          ) : null}
+
+          {view === 'poster' ? (
+            <>
+              <div className="step-heading">
+                <span className={settingsReady ? 'done' : ''}>{settingsReady ? '✓' : ''}</span>
+                <strong>포스터 설정</strong>
+              </div>
+              <SizingModeSection />
+            </>
+          ) : null}
+
+          {view === 'advanced' ? (
+            <>
+              <div className="advanced-heading">
+                <strong>고급 설정</strong>
+                <span>여백 · 풀칠 · 해상도 · 프린터 테스트 (선택)</span>
+              </div>
+              <FitAndOverlapSection />
+              <PrintOptionsSection />
+              <SeamTestSection
+                printScale={printScale}
+                hasSeamTestExported={hasSeamTestExported}
+                onExportSeamTest={onExportSeamTest}
+              />
+            </>
+          ) : null}
         </div>
 
         <p className="print-note">
