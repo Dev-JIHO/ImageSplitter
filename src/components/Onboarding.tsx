@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import type { LeftView } from '../types';
 
-type Art = 'intro' | 'upload' | 'size' | 'preview' | 'tools' | 'tip';
+type Art = 'intro' | 'upload' | 'size' | 'preview' | 'tools' | 'seamtest' | 'tip';
 
 interface Step {
   kind: 'modal' | 'spot' | 'tip';
@@ -46,16 +46,24 @@ const STEPS: Step[] = [
   },
   {
     kind: 'spot',
+    target: 'testprint',
+    art: 'seamtest',
+    title: '4. 프린터 테스트로 정확하게',
+    body: '큰 포스터를 다 인쇄하기 전에 “테스트 PDF(A4 2장)”를 먼저 인쇄하세요. 인쇄물의 100mm 사각형을 자로 재서 그 값을 “측정값 입력”에 넣으면, 실제 크기에 맞게 PDF가 자동 보정됩니다. 잉크·용지 낭비도 막을 수 있어요.',
+    view: 'upload',
+  },
+  {
+    kind: 'spot',
     target: 'preview',
     art: 'preview',
-    title: '4. 미리보기로 확인·조정',
+    title: '5. 미리보기로 확인·조정',
     body: '분할 결과를 실시간 확인. 휠·슬라이더로 확대, 드래그로 위치를 맞춰요.',
   },
   {
     kind: 'spot',
     target: 'tools',
     art: 'tools',
-    title: '5. 도구와 PDF 내보내기',
+    title: '6. 도구와 PDF 내보내기',
     body: '오른쪽 도구에서 회전·확대·위치를 조정하고 “PDF 내보내기”로 저장.',
   },
   {
@@ -163,6 +171,26 @@ function Illustration({ art }: { art: Art }) {
           <circle cx={150} cy={54} r={6} fill="var(--c-brand)" />
           <rect x={116} y={72} width={88} height={26} rx={7} fill="var(--c-brand)" />
           <path d="M160 79 v8 m-5 -3 l5 4 5 -4 M153 92 h14" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case 'seamtest':
+      return (
+        <svg {...common}>
+          <rect x={12} y={16} width={84} height={88} rx={6} {...sheet} />
+          <rect x={28} y={30} width={52} height={40} rx={2} fill="none" stroke="var(--c-brand-strong)" strokeWidth={2} />
+          <text x={54} y={54} textAnchor="middle" fontSize={11} fill="var(--c-text-2)">100mm</text>
+          <rect x={28} y={78} width={52} height={12} rx={2} fill="var(--c-warn)" opacity={0.45} />
+          <path d="M34 78v12M42 78v12M50 78v12M58 78v12M66 78v12M74 78v12" stroke="var(--c-text-2)" strokeWidth={1} />
+          <Arrow x={104} y={60} />
+          <text x={186} y={36} textAnchor="middle" fontSize={11} fill="var(--c-muted)">측정값 입력</text>
+          <rect x={142} y={44} width={88} height={30} rx={8} fill="var(--c-surface)" stroke="var(--c-border-2)" strokeWidth={2} />
+          <text x={186} y={64} textAnchor="middle" fontSize={14} fontWeight={700} fill="var(--c-text)">98 mm</text>
+          <Arrow x={236} y={60} />
+          <g className="onb-anim-zoom">
+            <circle cx={290} cy={60} r={17} fill="var(--c-success)" opacity={0.22} />
+            <path d="M283 60l5 5 9-10" fill="none" stroke="var(--c-text)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+          </g>
+          <text x={290} y={92} textAnchor="middle" fontSize={10} fill="var(--c-muted)">자동 보정</text>
         </svg>
       );
     case 'tip':
