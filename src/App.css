@@ -292,14 +292,16 @@ input:focus-visible {
 }
 
 .title-block {
+  position: relative;
   padding-bottom: 1rem;
   border-bottom: 1px solid var(--c-border-soft);
   margin-bottom: -0.25rem;
+  text-align: center;
 }
 
 .title-block h1 {
   margin: 0 0 0.25rem;
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   font-weight: var(--w-extrabold);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1172,7 +1174,9 @@ input:focus-visible {
 }
 
 .help-button {
-  flex: none;
+  position: absolute;
+  top: -0.25rem;
+  right: -0.25rem;
   width: 1.75rem;
   height: 1.75rem;
   border-radius: var(--r-pill);
