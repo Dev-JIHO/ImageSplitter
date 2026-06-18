@@ -25,6 +25,7 @@ export function PreviewPanel({
     <section
       className={`preview-panel ${isDraggingFile ? 'is-dropping' : ''}`}
       data-mobile-active={active}
+      data-tour="preview"
       aria-label="분할 미리보기"
       onDragEnter={(event) => {
         event.preventDefault();
@@ -50,12 +51,14 @@ export function PreviewPanel({
           사진을 여기에 놓으면 불러옵니다
         </div>
       ) : null}
+      <div className="preview-scroll">
+        {ready && image && plan && layout ? (
+          <PreviewCanvas image={image} plan={plan} layout={layout} />
+        ) : (
+          <EmptyPreview />
+        )}
+      </div>
       <PreviewLegend />
-      {ready && image && plan && layout ? (
-        <PreviewCanvas image={image} plan={plan} layout={layout} />
-      ) : (
-        <EmptyPreview />
-      )}
     </section>
   );
 }

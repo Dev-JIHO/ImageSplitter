@@ -1,22 +1,26 @@
+import { useSettings } from '../SettingsContext';
+
 export function PreviewLegend() {
+  const { settings } = useSettings();
+  const showGlue = settings.showGlueMarks && settings.overlapMm > 0;
+  const showMargin = settings.printerMarginMm > 0;
+
   return (
-    <div className="preview-legend" aria-label="미리보기 영역 설명">
+    <div className="preview-legend" aria-label="미리보기 범례">
       <span>
-        <i className="legend-swatch red" /> 페이지 경계선
+        <i className="legend-swatch boundary" aria-hidden /> 페이지 경계선
       </span>
-      <span>
-        <i className="legend-swatch blue" /> A4 용지
-      </span>
-      <span>
-        <i className="legend-swatch yellow" /> 분할된 이미지 영역
-      </span>
-      <span>
-        <i className="legend-swatch purple" /> 페이지 번호
-      </span>
-      <span>
-        <i className="legend-swatch black" /> 풀칠 영역
-      </span>
-      <span>1-1, 1-2: 붙이는 순서</span>
+      {showMargin ? (
+        <span>
+          <i className="legend-swatch margin" aria-hidden /> 프린터 여백
+        </span>
+      ) : null}
+      {showGlue ? (
+        <span>
+          <i className="legend-swatch glue" aria-hidden /> 풀칠 영역
+        </span>
+      ) : null}
+      {settings.showPageNumbers ? <span>1-1, 1-2 : 붙이는 순서</span> : null}
     </div>
   );
 }

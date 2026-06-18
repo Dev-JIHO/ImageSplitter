@@ -27,6 +27,7 @@ export function PreviewSidebar({
       className="tools-panel"
       data-collapsed={collapsed}
       data-mobile-active={active}
+      data-tour="tools"
       aria-label="미리보기 도구"
     >
       <button
@@ -111,6 +112,7 @@ export function PreviewSidebar({
             <button
               type="button"
               className="export-button"
+              data-tour="export"
               disabled={!ready || isExporting}
               onClick={onRequestExport}
             >

@@ -6,7 +6,7 @@ export function SizingModeSection() {
 
   return (
     <>
-      <fieldset className="segmented">
+      <fieldset className="segmented" data-tour="size">
         <legend>어떻게 크게 만들까요?</legend>
         <button
           type="button"
