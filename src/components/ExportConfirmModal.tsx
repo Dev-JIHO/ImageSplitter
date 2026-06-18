@@ -26,6 +26,15 @@ export function ExportConfirmModal({
     <div className="modal-backdrop" role="presentation">
       <section className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="export-title">
         <h2 id="export-title">PDF 만들기 전 확인</h2>
+        <p className="confirm-count">
+          A4 <strong>{layout.slices.length}장</strong>을 인쇄합니다.
+        </p>
+        {layout.slices.length >= 6 ? (
+          <p className="modal-warning">
+            장수가 많습니다. 잉크·용지 낭비를 막으려면, 취소 후 “프린터 테스트(A4 2장)”로
+            크기·이음새를 먼저 확인하는 것을 권합니다.
+          </p>
+        ) : null}
         <dl className="confirm-list">
           <div>
             <dt>A4 방향</dt>

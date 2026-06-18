@@ -1440,3 +1440,62 @@ input:focus-visible {
   font-weight: var(--w-extrabold);
   color: var(--c-text);
 }
+
+/* ===== 테스트 인쇄 권유 배너 ===== */
+.test-print-callout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.875rem;
+  border: 2px solid var(--c-warn);
+  border-radius: var(--r-sm);
+  background: var(--c-warn-bg);
+}
+
+.test-print-callout-text strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 1rem;
+  font-weight: var(--w-extrabold);
+  color: var(--c-warn-text);
+}
+
+.test-print-callout-text p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--c-text-2);
+}
+
+.test-print-callout-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.test-print-callout .export-button {
+  width: 100%;
+}
+
+.link-button {
+  align-self: flex-start;
+  padding: 0.25rem 0;
+  border: 0;
+  background: transparent;
+  color: var(--c-brand-strong);
+  font-weight: var(--w-bold);
+  font-size: 0.875rem;
+  text-decoration: underline;
+}
+
+.confirm-count {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  color: var(--c-text-2);
+}
+
+.confirm-count strong {
+  font-size: 1.25rem;
+  font-weight: var(--w-extrabold);
+  color: var(--c-brand-strong);
+}

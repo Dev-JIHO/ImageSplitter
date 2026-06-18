@@ -148,6 +148,30 @@ export function SettingsPanel({
           <p>A4 용지뿐인데 저더러 그 커다란 걸 뽑으라구요..?</p>
         </div>
 
+        {view !== 'advanced' ? (
+          <div className="test-print-callout" data-tour="testprint">
+            <div className="test-print-callout-text">
+              <strong>인쇄 전, 테스트부터!</strong>
+              <p>
+                A4 2장만 인쇄해 크기(100mm)와 이음새를 확인하면 수십 장 낭비를 막을 수
+                있어요. 흑백·초안 모드로 인쇄하면 잉크도 절약됩니다.
+              </p>
+            </div>
+            <div className="test-print-callout-actions">
+              <button type="button" className="export-button" onClick={onExportSeamTest}>
+                테스트 PDF 받기 (A4 2장)
+              </button>
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => onViewChange('advanced')}
+              >
+                측정값 입력하기 →
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         <div
           className="view-panel"
           id="settings-view-panel"
