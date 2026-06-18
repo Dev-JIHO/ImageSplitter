@@ -74,7 +74,7 @@ export function ExportConfirmModal({
         </dl>
         {zoomed ? (
           <p className="modal-warning">
-            확대({Math.round(settings.imageScale * 100)}%) 상태라 팔레트 밖으로 넘치는
+            확대({Math.round(settings.imageScale * 100)}%) 상태라 포스터 영역 밖으로 넘치는
             가장자리는 잘립니다. 잘림을 없애려면 확대를 원래대로(100%) 되돌리세요.
           </p>
         ) : null}

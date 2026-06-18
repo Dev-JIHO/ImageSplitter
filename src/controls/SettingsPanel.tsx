@@ -76,6 +76,7 @@ export function SettingsPanel({
     { id: 'poster', label: '포스터 설정', icon: <GridIcon /> },
     { id: 'advanced', label: '고급 설정', icon: <SlidersIcon /> },
   ];
+  const viewLabel = tabs.find((tab) => tab.id === view)?.label ?? '';
 
   return (
     <section
@@ -103,11 +104,12 @@ export function SettingsPanel({
               data-active={view === tab.id}
               role="tab"
               aria-selected={view === tab.id}
+              aria-controls="settings-view-panel"
               onClick={() => onViewChange(tab.id)}
-              aria-label={tab.label}
               title={tab.label}
             >
               {tab.icon}
+              <span className="panel-view-tab-label">{tab.label}</span>
             </button>
           ))}
         </div>
@@ -130,6 +132,12 @@ export function SettingsPanel({
           <p>A4 용지뿐인데 저더러 그 커다란 걸 뽑으라구요..?</p>
         </div>
 
+        <div
+          className="view-panel"
+          id="settings-view-panel"
+          role="tabpanel"
+          aria-label={viewLabel}
+        >
         {view === 'upload' ? (
           <ImageUploadSection
             loadedImage={loadedImage}
@@ -141,7 +149,7 @@ export function SettingsPanel({
         {view === 'poster' ? (
           <>
             <div className="step-heading">
-              <span className={settingsReady ? 'done' : ''}>{settingsReady ? '✓' : '2'}</span>
+              <span className={settingsReady ? 'done' : ''}>{settingsReady ? '✓' : ''}</span>
               <strong>포스터 설정</strong>
             </div>
             <SizingModeSection />
@@ -163,6 +171,7 @@ export function SettingsPanel({
             />
           </>
         ) : null}
+        </div>
 
         <p className="print-note">
           인쇄 창에서 반드시 실제 크기 또는 100%를 선택하고, 용지에 맞춤은 꺼주세요.
@@ -174,6 +183,10 @@ export function SettingsPanel({
           targetSize={layoutState.targetSize}
           error={layoutState.error}
         />
+
+        <p className="hint-text export-hint">
+          포스터가 준비되면 오른쪽 도구의 “PDF 내보내기”로 저장하세요. (모바일은 아래 “미리보기” 탭에서)
+        </p>
       </div>
     </section>
   );

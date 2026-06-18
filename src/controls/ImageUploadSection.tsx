@@ -13,8 +13,8 @@ export function ImageUploadSection({
   return (
     <>
       <div className="step-heading">
-        <span className={loadedImage ? 'done' : ''}>{loadedImage ? '✓' : '1'}</span>
-        <strong>이미지 선택</strong>
+        <span className={loadedImage ? 'done' : ''}>{loadedImage ? '✓' : ''}</span>
+        <strong>사진 선택</strong>
       </div>
       <div className="upload-row" data-tour="upload">
         <label className="upload-button">
