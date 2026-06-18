@@ -1,16 +1,14 @@
-import { useState, type ReactElement } from 'react';
+import { type ReactElement } from 'react';
 import { Chevron } from '../components/Chevron';
 import type { LoadedImage } from '../lib/imageLoader';
 import type { ResolvedPrintScale } from '../lib/printScale';
-import type { LayoutState } from '../types';
+import type { LayoutState, LeftView } from '../types';
 import { FitAndOverlapSection } from './FitAndOverlapSection';
 import { ImageUploadSection } from './ImageUploadSection';
 import { PrintOptionsSection } from './PrintOptionsSection';
 import { SeamTestSection } from './SeamTestSection';
 import { SizingModeSection } from './SizingModeSection';
 import { Summary } from './Summary';
-
-type View = 'upload' | 'poster' | 'advanced';
 
 function PhotoIcon() {
   return (
@@ -46,6 +44,8 @@ export function SettingsPanel({
   active,
   collapsed,
   onToggleCollapse,
+  view,
+  onViewChange,
   onStartTour,
   loadedImage,
   imageError,
@@ -58,6 +58,8 @@ export function SettingsPanel({
   active: boolean;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  view: LeftView;
+  onViewChange: (view: LeftView) => void;
   onStartTour: () => void;
   loadedImage: LoadedImage | null;
   imageError: string;
@@ -67,10 +69,9 @@ export function SettingsPanel({
   hasSeamTestExported: boolean;
   onExportSeamTest: () => void;
 }) {
-  const [view, setView] = useState<View>('upload');
   const settingsReady = !!loadedImage && !layoutState.error;
 
-  const tabs: Array<{ id: View; label: string; icon: ReactElement }> = [
+  const tabs: Array<{ id: LeftView; label: string; icon: ReactElement }> = [
     { id: 'upload', label: '사진 선택', icon: <PhotoIcon /> },
     { id: 'poster', label: '포스터 설정', icon: <GridIcon /> },
     { id: 'advanced', label: '고급 설정', icon: <SlidersIcon /> },
@@ -93,7 +94,7 @@ export function SettingsPanel({
         {collapsed ? <Chevron dir="right" /> : <Chevron dir="left" />}
       </button>
       {!collapsed ? (
-        <div className="panel-view-tabs" role="tablist" aria-label="설정 화면 전환">
+        <div className="panel-view-tabs" role="tablist" aria-label="설정 화면 전환" data-tour="views">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -102,7 +103,7 @@ export function SettingsPanel({
               data-active={view === tab.id}
               role="tab"
               aria-selected={view === tab.id}
-              onClick={() => setView(tab.id)}
+              onClick={() => onViewChange(tab.id)}
               aria-label={tab.label}
               title={tab.label}
             >

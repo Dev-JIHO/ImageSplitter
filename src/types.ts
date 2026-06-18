@@ -4,6 +4,7 @@ import type { ResolvedTargetSize } from './lib/targetSize';
 
 export type SizingMode = 'manual' | 'target';
 export type MobilePanel = 'settings' | 'preview';
+export type LeftView = 'upload' | 'poster' | 'advanced';
 
 /** preparedImage + settings로부터 산출되는 레이아웃 파생 상태. */
 export interface LayoutState {
