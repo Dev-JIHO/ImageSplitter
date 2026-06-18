@@ -1335,3 +1335,14 @@ input:focus-visible {
   border-right: 0;
   border-radius: var(--r-xs) 0 0 var(--r-xs);
 }
+
+/* 접기 토글 바로 아래 두 번째 탭 — 고급 설정 화면 전환. */
+.panel-toggle-advanced {
+  top: 4.625rem;
+}
+
+.panel-toggle[data-active='true'] {
+  background: var(--c-brand);
+  border-color: var(--c-brand);
+  color: #fff;
+}
