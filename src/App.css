@@ -982,8 +982,12 @@ input:focus-visible {
 
   .panel-collapse-toggle,
   .panel-bookmark,
-  .panel-toggle,
   .resize-handle {
+    display: none;
+  }
+
+  /* 파일 끝 .panel-toggle 기본값(display:flex)을 이기도록 특이도를 올린다. */
+  .app-shell .panel-toggle {
     display: none;
   }
 
