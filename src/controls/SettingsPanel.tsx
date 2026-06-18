@@ -1,4 +1,4 @@
-import { type ReactElement } from 'react';
+import { type KeyboardEvent, type ReactElement } from 'react';
 import { Chevron } from '../components/Chevron';
 import type { LoadedImage } from '../lib/imageLoader';
 import type { ResolvedPrintScale } from '../lib/printScale';
@@ -78,6 +78,20 @@ export function SettingsPanel({
   ];
   const viewLabel = tabs.find((tab) => tab.id === view)?.label ?? '';
 
+  function handleTabKey(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    const last = tabs.length - 1;
+    let next = -1;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') next = index === last ? 0 : index + 1;
+    else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') next = index === 0 ? last : index - 1;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = last;
+    if (next < 0) return;
+    event.preventDefault();
+    onViewChange(tabs[next].id);
+    const target = event.currentTarget.parentElement?.children[next];
+    if (target instanceof HTMLElement) target.focus();
+  }
+
   return (
     <section
       className="control-panel"
@@ -96,7 +110,7 @@ export function SettingsPanel({
       </button>
       {!collapsed ? (
         <div className="panel-view-tabs" role="tablist" aria-label="설정 화면 전환" data-tour="views">
-          {tabs.map((tab) => (
+          {tabs.map((tab, index) => (
             <button
               key={tab.id}
               type="button"
@@ -105,7 +119,9 @@ export function SettingsPanel({
               role="tab"
               aria-selected={view === tab.id}
               aria-controls="settings-view-panel"
+              tabIndex={view === tab.id ? 0 : -1}
               onClick={() => onViewChange(tab.id)}
+              onKeyDown={(event) => handleTabKey(event, index)}
               title={tab.label}
             >
               {tab.icon}

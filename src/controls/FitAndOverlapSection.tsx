@@ -6,6 +6,7 @@ export function FitAndOverlapSection() {
 
   return (
     <>
+      <p className="subsection-label">배치 · 풀칠</p>
       <p className="hint-text">
         사진은 기본적으로 잘리지 않게 포스터 영역에 맞춰 배치됩니다. 회전·확대·위치 조정은
         오른쪽 미리보기의 작은 도구에서 할 수 있습니다.
