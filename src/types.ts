@@ -21,6 +21,8 @@ export interface Settings {
   columns: number;
   targetWidthMm: number;
   targetHeightMm: number;
+  /** 완성 크기 모드의 용지 방향. */
+  targetOrientation: Orientation;
   overlapMm: number;
   printerMarginMm: number;
   exportDpi: number;

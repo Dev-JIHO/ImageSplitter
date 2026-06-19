@@ -64,7 +64,6 @@ export function PreviewSidebar({
         {collapsed ? <Chevron dir="left" /> : <Chevron dir="right" />}
         <span className="panel-toggle-label">{collapsed ? '펼치기' : '접기'}</span>
       </button>
-
       <div className="tools-panel-body">
         {ready ? (
           <>

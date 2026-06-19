@@ -13,8 +13,10 @@ export function SeamTestSection({
   onExportSeamTest: () => void;
 }) {
   const { settings, updateSetting } = useSettings();
-  // 가장 권장되는 항목이라 기본으로 펼친다.
-  const [open, setOpen] = useState(true);
+  // 기본은 닫힘. 단, 이미 테스트를 받았거나 보정값이 입력된 상태면 입력란이 보이도록 펼친다.
+  const [open, setOpen] = useState(
+    hasSeamTestExported || settings.measuredSquareMm !== 100,
+  );
 
   return (
     <details

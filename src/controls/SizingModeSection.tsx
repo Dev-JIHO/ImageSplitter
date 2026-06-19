@@ -6,7 +6,7 @@ export function SizingModeSection() {
 
   return (
     <>
-      <fieldset className="segmented" data-tour="size">
+      <fieldset className="segmented segmented-float" data-tour="size">
         <legend>어떻게 만들까요?</legend>
         <button
           type="button"
@@ -29,7 +29,7 @@ export function SizingModeSection() {
 
       {settings.mode === 'manual' ? (
         <>
-          <fieldset className="segmented">
+          <fieldset className="segmented segmented-float">
             <legend>용지 방향</legend>
             <button
               type="button"
@@ -78,6 +78,23 @@ export function SizingModeSection() {
         </>
       ) : (
         <>
+          <fieldset className="segmented segmented-float">
+            <legend>용지 방향</legend>
+            <button
+              type="button"
+              className={settings.targetOrientation === 'portrait' ? 'active' : ''}
+              onClick={() => updateSetting('targetOrientation', 'portrait')}
+            >
+              세로
+            </button>
+            <button
+              type="button"
+              className={settings.targetOrientation === 'landscape' ? 'active' : ''}
+              onClick={() => updateSetting('targetOrientation', 'landscape')}
+            >
+              가로
+            </button>
+          </fieldset>
           <div className="field-grid">
             <NumberField
               label="완성 가로(mm)"
