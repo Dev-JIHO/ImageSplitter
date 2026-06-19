@@ -1,3 +1,4 @@
+import { InfoHint } from '../components/InfoHint';
 import { supportedImageAccept, supportedImageText } from '../constants';
 import type { LoadedImage } from '../lib/imageLoader';
 
@@ -37,8 +38,11 @@ export function ImageUploadSection({
       </div>
 
       <p className="hint-text">
-        오른쪽 미리보기 영역에 사진을 끌어다 놓거나, 복사한 이미지를 붙여넣기(Ctrl+V)
-        해도 됩니다. {supportedImageText}.
+        끌어다 놓기·붙여넣기(Ctrl+V)도 돼요
+        <InfoHint>
+          오른쪽 미리보기 영역에 사진을 끌어다 놓거나, 복사한 이미지를 Ctrl+V로
+          붙여넣을 수 있어요. 지원 형식: {supportedImageText}.
+        </InfoHint>
       </p>
       {imageError ? <p className="error-text">{imageError}</p> : null}
     </>

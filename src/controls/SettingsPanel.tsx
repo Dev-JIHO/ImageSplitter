@@ -1,5 +1,6 @@
 import { useState, type KeyboardEvent, type ReactElement } from 'react';
 import { AdvancedHelpModal } from '../components/AdvancedHelpModal';
+import { InfoHint } from '../components/InfoHint';
 import { Chevron } from '../components/Chevron';
 import type { LoadedImage } from '../lib/imageLoader';
 import type { ResolvedPrintScale } from '../lib/printScale';
@@ -147,7 +148,7 @@ export function SettingsPanel({
           >
             ?
           </button>
-          <p>A4 용지뿐인데 저더러 그 커다란 걸 뽑으라구요..?</p>
+          <p>사진 한 장을 여러 A4로 나눠 큰 포스터로!</p>
         </div>
 
         {view === 'upload' ? (
@@ -155,8 +156,11 @@ export function SettingsPanel({
             <div className="test-print-callout-text">
               <strong>인쇄 전, 테스트부터!</strong>
               <p>
-                A4 2장만 인쇄해 크기(100mm)와 이음새를 확인하면 수십 장 낭비를 막을 수
-                있어요. 흑백·초안 모드로 인쇄하면 잉크도 절약됩니다.
+                A4 2장만 먼저 인쇄해 크기를 확인하면 종이 낭비를 막아요
+                <InfoHint>
+                  100mm 사각형과 이음새가 잘 맞는지 확인할 수 있어요. 흑백·초안 모드로
+                  인쇄하면 잉크도 절약됩니다.
+                </InfoHint>
               </p>
             </div>
             <div className="test-print-callout-actions">
@@ -169,13 +173,6 @@ export function SettingsPanel({
                 }}
               >
                 테스트 PDF 받기 (A4 2장)
-              </button>
-              <button
-                type="button"
-                className="link-button"
-                onClick={() => onViewChange('advanced')}
-              >
-                측정값 입력하기 →
               </button>
             </div>
           </div>
@@ -235,11 +232,12 @@ export function SettingsPanel({
         </div>
 
         <p className="print-note">
-          인쇄 창에서 반드시 실제 크기 또는 100%를 선택하고, 용지에 맞춤은 꺼주세요.
+          인쇄는 “실제 크기(100%)”로, “용지에 맞춤”은 꺼주세요.
         </p>
 
         <p className="hint-text export-hint">
-          포스터가 준비되면 오른쪽 도구의 “PDF 내보내기”로 저장하세요. (모바일은 아래 “미리보기” 탭에서)
+          오른쪽 도구의 “PDF 내보내기”로 저장해요
+          <InfoHint>모바일에서는 아래 “미리보기” 탭에서 내보냅니다.</InfoHint>
         </p>
       </div>
 
