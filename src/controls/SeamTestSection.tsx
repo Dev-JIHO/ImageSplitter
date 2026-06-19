@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { InfoHint } from '../components/InfoHint';
 import { NumberField } from '../components/NumberField';
 import type { ResolvedPrintScale } from '../lib/printScale';
 import { useSettings } from '../SettingsContext';
@@ -27,9 +28,11 @@ export function SeamTestSection({
       <summary>프린터 테스트 · 크기 보정 (권장)</summary>
       <div className="options-group-body">
         <p className="hint-text">
-          포스터를 만들기 전에 A4 2장을 인쇄해 붙여보고, 크기가 정확한지(100mm
-          사각형)와 이음새가 매끄럽게 이어지는지(눈금·원·사선)를 확인할 수
-          있습니다. 사진이 없어도 만들 수 있습니다.
+          A4 2장으로 크기·이음새를 먼저 확인해요
+          <InfoHint>
+            포스터를 만들기 전에 테스트 2장을 인쇄해, 100mm 사각형이 정확한지와 이음새가
+            매끄러운지 확인할 수 있어요. 사진이 없어도 만들 수 있습니다.
+          </InfoHint>
         </p>
         <button type="button" className="secondary-button" onClick={onExportSeamTest}>
           테스트 PDF 받기 (A4 2장)
@@ -44,16 +47,16 @@ export function SeamTestSection({
               onChange={(value) => updateSetting('measuredSquareMm', value)}
             />
             <p className="hint-text">
-              인쇄된 100mm 사각형이 실제 몇 mm인지 자로 재서 입력하세요. 배율을
-              조절할 수 없는 인쇄 앱(예: Epson Smart Panel)에서도 실제 크기에 맞게
-              PDF를 보정합니다. 정확히 100mm라면 100을 그대로 두세요.
+              인쇄된 네모를 자로 재서 입력하세요
+              <InfoHint>
+                인쇄된 100mm 사각형이 실제 몇 mm인지 자로 재서 넣으면, 배율 조절이 안 되는
+                인쇄 앱(예: Epson Smart Panel)에서도 실제 크기에 맞게 PDF를 보정합니다.
+                정확히 100mm면 그대로 두세요.
+              </InfoHint>
             </p>
           </>
         ) : (
-          <p className="hint-text">
-            테스트를 인쇄한 뒤 다시 이곳에 오면, 측정값을 입력해 인쇄 크기를 보정할
-            수 있습니다.
-          </p>
+          <p className="hint-text">테스트를 인쇄한 뒤 측정값을 입력하면 크기가 보정돼요.</p>
         )}
         {printScale.factor !== 1 ? (
           <p className="print-note">

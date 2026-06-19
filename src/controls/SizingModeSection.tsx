@@ -1,3 +1,4 @@
+import { InfoHint } from '../components/InfoHint';
 import { NumberField } from '../components/NumberField';
 import { useSettings } from '../SettingsContext';
 
@@ -112,8 +113,12 @@ export function SizingModeSection() {
             />
           </div>
           <p className="hint-text">
-            완성될 가로·세로(mm)를 입력하면 그 크기로 정확히 만들어집니다(게시판 등). 이미지가
-            영역을 가득 채우며, 비율이 다르면 넘치는 부분이 잘립니다(드래그로 위치 조정).
+            원하는 완성 크기(mm)를 입력하세요
+            <InfoHint>
+              입력한 가로·세로(mm) 크기로 정확히 만들어집니다(게시판 등). 사진이 영역을
+              가득 채우고, 비율이 다르면 넘치는 부분은 잘립니다(미리보기에서 드래그로 위치
+              조정).
+            </InfoHint>
           </p>
         </>
       )}

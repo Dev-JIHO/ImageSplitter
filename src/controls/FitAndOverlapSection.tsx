@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { InfoHint } from '../components/InfoHint';
 import { NumberField } from '../components/NumberField';
 import { useSettings } from '../SettingsContext';
 
@@ -32,9 +33,11 @@ export function FitAndOverlapSection() {
           <span>풀칠 영역 표시(빗금)</span>
         </label>
         <p className="hint-text">
-          이어붙일 가장자리에 남길 빈 탭 크기입니다. 0mm로 두면 풀칠 탭 없이 사진만
-          나뉩니다. 풀칠 탭이 없는 최하단·최우측 모서리 장에는 페이지 번호가 표시되지
-          않습니다.
+          이어 붙일 때 겹치는 여백이에요
+          <InfoHint>
+            가장자리에 남길 겹침 탭 크기(mm)입니다. 0이면 겹침 없이 나뉩니다. 탭이 없는
+            최하단·최우측 모서리 장에는 페이지 번호가 표시되지 않습니다.
+          </InfoHint>
         </p>
       </div>
     </details>

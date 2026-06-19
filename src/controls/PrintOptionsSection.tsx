@@ -1,3 +1,4 @@
+import { InfoHint } from '../components/InfoHint';
 import { NumberField } from '../components/NumberField';
 import { useSettings } from '../SettingsContext';
 
@@ -29,7 +30,11 @@ export function PrintOptionsSection() {
           onChange={(value) => updateSetting('printerMarginMm', value)}
         />
         <p className="hint-text">
-          프린터가 종이 가장자리에 인쇄하지 못하는 영역입니다. 일반 프린터는 3~5mm를 권장합니다.
+          보통 3~5mm 권장
+          <InfoHint>
+            프린터가 종이 가장자리에 인쇄하지 못하는 영역이에요. 너무 작으면 끝이 잘릴 수
+            있어요.
+          </InfoHint>
         </p>
         {settings.printerMarginMm <= 0 ? (
           <p className="warning-text" role="alert">
@@ -52,7 +57,10 @@ export function PrintOptionsSection() {
             </button>
           ))}
         </fieldset>
-        <p className="hint-text">300 DPI는 더 선명하지만 PDF 생성이 느려질 수 있습니다.</p>
+        <p className="hint-text">
+          숫자가 클수록 선명해요
+          <InfoHint>해상도가 높을수록 또렷하지만 PDF 생성이 느려질 수 있어요.</InfoHint>
+        </p>
       </div>
     </details>
   );
