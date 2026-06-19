@@ -111,28 +111,29 @@ export function SettingsPanel({
         {collapsed ? <Chevron dir="right" /> : <Chevron dir="left" />}
         <span className="panel-toggle-label">{collapsed ? '펼치기' : '접기'}</span>
       </button>
-      {!collapsed ? (
-        <div className="panel-view-tabs" role="tablist" aria-label="설정 화면 전환" data-tour="views">
-          {tabs.map((tab, index) => (
-            <button
-              key={tab.id}
-              type="button"
-              className="panel-view-tab"
-              data-active={view === tab.id}
-              role="tab"
-              aria-selected={view === tab.id}
-              aria-controls="settings-view-panel"
-              tabIndex={view === tab.id ? 0 : -1}
-              onClick={() => onViewChange(tab.id)}
-              onKeyDown={(event) => handleTabKey(event, index)}
-              title={tab.label}
-            >
-              {tab.icon}
-              <span className="panel-view-tab-label">{tab.label}</span>
-            </button>
-          ))}
-        </div>
-      ) : null}
+      <div className="panel-view-tabs" role="tablist" aria-label="설정 화면 전환" data-tour="views">
+        {tabs.map((tab, index) => (
+          <button
+            key={tab.id}
+            type="button"
+            className="panel-view-tab"
+            data-active={view === tab.id}
+            role="tab"
+            aria-selected={view === tab.id}
+            aria-controls="settings-view-panel"
+            tabIndex={view === tab.id ? 0 : -1}
+            onClick={() => {
+              onViewChange(tab.id);
+              if (collapsed) onToggleCollapse();
+            }}
+            onKeyDown={(event) => handleTabKey(event, index)}
+            title={tab.label}
+          >
+            {tab.icon}
+            <span className="panel-view-tab-label">{tab.label}</span>
+          </button>
+        ))}
+      </div>
 
       <div className="panel-scroll">
         <div className="title-block">
@@ -159,7 +160,14 @@ export function SettingsPanel({
               </p>
             </div>
             <div className="test-print-callout-actions">
-              <button type="button" className="export-button" onClick={onExportSeamTest}>
+              <button
+                type="button"
+                className="export-button"
+                onClick={() => {
+                  onExportSeamTest();
+                  onViewChange('advanced');
+                }}
+              >
                 테스트 PDF 받기 (A4 2장)
               </button>
               <button

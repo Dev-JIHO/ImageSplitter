@@ -20,6 +20,8 @@ export interface TargetSizeInput {
   marginMm?: number;
   overlapMm: number;
   printerMarginMm?: number;
+  /** 지정하면 해당 용지 방향으로만 격자를 계산한다. 생략 시 두 방향 중 최적 선택. */
+  orientation?: Orientation;
 }
 
 export interface GridPlan {
@@ -87,7 +89,10 @@ export function recommendTargetGrid(input: TargetSizeInput): GridPlan {
   assertPositiveNumber(input.targetHeightMm, 'Target height');
   assertPrinterMargin(input.printerMarginMm ?? 0);
 
-  const candidates = (['portrait', 'landscape'] as const).flatMap((orientation) =>
+  const orientations: readonly Orientation[] = input.orientation
+    ? [input.orientation]
+    : (['portrait', 'landscape'] as const);
+  const candidates = orientations.flatMap((orientation) =>
     createTargetCandidates(orientation, input),
   );
 

@@ -104,4 +104,24 @@ describe('geometry', () => {
       pageCount: 2,
     });
   });
+  test('완성 크기 모드에서 용지 방향을 지정하면 그 방향으로만 격자를 만든다', () => {
+    const portrait = recommendTargetGrid({
+      targetWidthMm: 600,
+      targetHeightMm: 400,
+      overlapMm: 10,
+      printerMarginMm: 5,
+      orientation: 'portrait',
+    });
+    expect(portrait.orientation).toBe('portrait');
+
+    const landscape = recommendTargetGrid({
+      targetWidthMm: 600,
+      targetHeightMm: 400,
+      overlapMm: 10,
+      printerMarginMm: 5,
+      orientation: 'landscape',
+    });
+    expect(landscape.orientation).toBe('landscape');
+  });
+
 });

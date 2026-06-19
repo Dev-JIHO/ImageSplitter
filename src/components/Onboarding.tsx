@@ -6,11 +6,22 @@ type Art = 'intro' | 'upload' | 'size' | 'preview' | 'tools' | 'seamtest' | 'tip
 interface Step {
   kind: 'modal' | 'spot' | 'tip';
   target?: string;
+  /** 여러 요소를 한 번에 하이라이트할 때 CSS 셀렉터 목록(합집합 영역). */
+  selectors?: string[];
   art: Art;
   title: string;
   body: string;
   /** 이 단계에서 좌측 패널을 이 화면으로 전환한다. */
   view?: LeftView;
+}
+
+interface Box {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  width: number;
+  height: number;
 }
 
 const STEPS: Step[] = [
@@ -23,9 +34,10 @@ const STEPS: Step[] = [
   {
     kind: 'spot',
     target: 'views',
+    selectors: ['.control-panel .panel-toggle', '.control-panel .panel-view-tabs'],
     art: 'intro',
-    title: '1. 화면 전환 탭',
-    body: '왼쪽의 세 탭으로 “사진 선택 · 포스터 설정 · 고급 설정” 화면을 전환해요. 맨 위 «« 버튼을 누르면 설정 패널을 접어 미리보기를 넓게 볼 수 있어요.',
+    title: '1. 화면 전환 · 접기',
+    body: '왼쪽의 세 탭으로 “사진 선택 · 포스터 설정 · 고급 설정” 화면을 전환해요. 맨 위의 접기 버튼을 누르면 설정 패널을 접어 미리보기를 넓게 볼 수 있어요.',
     view: 'upload',
   },
   {
@@ -39,6 +51,7 @@ const STEPS: Step[] = [
   {
     kind: 'spot',
     target: 'size',
+    selectors: ['[data-tour="size"]', '[data-tour="size"] > legend'],
     art: 'size',
     title: '3. 포스터 크기 정하기',
     body: '“A4 장수”로 직접 정하거나, “완성 크기(mm)”로 정확히 — 둘 중 선택.',
@@ -197,11 +210,18 @@ function Illustration({ art }: { art: Art }) {
     default:
       return (
         <svg {...common}>
+          <defs>
+            <pattern id="glueHatchTip" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="5" stroke="rgba(0,0,0,0.45)" strokeWidth={1} />
+            </pattern>
+          </defs>
+          {/* 왼쪽 장: 오른쪽 가장자리에 풀칠(빗금) 영역 */}
           <rect x={40} y={30} width={70} height={64} rx={6} {...sheet} />
+          <rect x={92} y={30} width={18} height={64} fill="var(--c-warn)" opacity={0.25} />
+          <rect x={92} y={30} width={18} height={64} fill="url(#glueHatchTip)" />
+          {/* 오른쪽 장(겹쳐 붙임) */}
           <g className="onb-anim-slide">
             <rect x={120} y={30} width={70} height={64} rx={6} {...sheet} />
-            <rect x={120} y={30} width={20} height={64} fill="var(--c-warn)" opacity={0.25} />
-            <path d="M120 30 v64 M127 30 v64 M134 30 v64" stroke="rgba(0,0,0,0.4)" strokeWidth={1} />
           </g>
           <circle cx={250} cy={44} r={20} fill="var(--c-success)" opacity={0.18} />
           <text x={250} y={49} textAnchor="middle" fontSize={15} fontWeight={800} fill="var(--c-text)">100%</text>
@@ -212,17 +232,40 @@ function Illustration({ art }: { art: Art }) {
 }
 
 function useTargetRect(active: boolean, step: Step | undefined, useSpotlight: boolean) {
-  const [rect, setRect] = useState<DOMRect | null>(null);
+  const [rect, setRect] = useState<Box | null>(null);
   useEffect(() => {
     if (!active || !step || step.kind !== 'spot' || !useSpotlight) {
       setRect(null);
       return;
     }
     const update = () => {
-      const el = document.querySelector(`[data-tour="${step.target}"]`);
-      // 대상이 아직 렌더되지 않았으면(화면 전환 직후) 이전 위치를 유지해
-      // 카드가 중앙으로 튀었다가 이동하는 깜빡임을 방지한다.
-      if (el) setRect(el.getBoundingClientRect());
+      const selectors =
+        step.selectors ?? (step.target ? [`[data-tour="${step.target}"]`] : []);
+      let box: { left: number; top: number; right: number; bottom: number } | null = null;
+      for (const selector of selectors) {
+        const el = document.querySelector(selector);
+        if (!el) continue;
+        const r = el.getBoundingClientRect();
+        box = box
+          ? {
+              left: Math.min(box.left, r.left),
+              top: Math.min(box.top, r.top),
+              right: Math.max(box.right, r.right),
+              bottom: Math.max(box.bottom, r.bottom),
+            }
+          : { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+      }
+      // 대상이 아직 렌더되지 않았으면(화면 전환 직후) 이전 위치를 유지해 깜빡임을 방지.
+      if (box) {
+        setRect({
+          left: box.left,
+          top: box.top,
+          right: box.right,
+          bottom: box.bottom,
+          width: box.right - box.left,
+          height: box.bottom - box.top,
+        });
+      }
     };
     update();
     const timer = window.setTimeout(update, 60);
@@ -276,15 +319,14 @@ export function Onboarding({
 
   let cardStyle: CSSProperties = {};
   if (spotlight && !useCenter) {
-    const left = Math.min(
-      Math.max(12, spotlight.left + spotlight.width / 2 - cardW / 2),
-      vw - cardW - 12,
-    );
+    const gap = 12;
+    // 하이라이트의 우측 하단 모서리에 카드의 좌측 상단이 인접하도록 배치한다.
+    const left = Math.min(Math.max(12, spotlight.right + gap), vw - cardW - 12);
     const spaceBelow = vh - spotlight.bottom;
     cardStyle =
       spaceBelow > 260
-        ? { top: spotlight.bottom + 14, left }
-        : { bottom: Math.max(12, vh - spotlight.top + 14), left };
+        ? { top: spotlight.bottom + gap, left }
+        : { bottom: Math.max(12, vh - spotlight.top + gap), left };
   }
 
   return (

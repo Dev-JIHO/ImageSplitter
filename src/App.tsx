@@ -40,6 +40,8 @@ export default function App() {
   }
 
   const { loadedImage, imageError, handleFileChange } = useImageUpload(() => {
+    // 사진을 올리면 자동으로 '포스터 설정' 화면으로 전환한다.
+    setLeftView('poster');
     // 모바일: 이미지를 올리면 바로 미리보기를 보여주고, 조정 값을 초기화한다.
     setActiveMobilePanel('preview');
     setSettings((current) => ({

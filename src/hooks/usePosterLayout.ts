@@ -29,6 +29,7 @@ export function usePosterLayout(
             targetHeightMm: targetSize.heightMm,
             overlapMm: settings.overlapMm,
             printerMarginMm: settings.printerMarginMm,
+            orientation: settings.targetOrientation,
           })
         : createManualGridPlan({
             orientation: settings.orientation,

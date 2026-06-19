@@ -4,7 +4,7 @@ import { useSettings } from '../SettingsContext';
 
 export function FitAndOverlapSection() {
   const { settings, updateSetting } = useSettings();
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   return (
     <details
