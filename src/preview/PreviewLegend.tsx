@@ -20,7 +20,6 @@ export function PreviewLegend() {
           <i className="legend-swatch glue" aria-hidden /> 풀칠 영역
         </span>
       ) : null}
-      {settings.showPageNumbers ? <span>1-1, 1-2 : 붙이는 순서</span> : null}
     </div>
   );
 }
