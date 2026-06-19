@@ -300,12 +300,20 @@ input:focus-visible {
 }
 
 .title-block h1 {
-  margin: 10 0 0.25rem;
-  font-size: 1.5rem;
+  margin: 0.625rem 0 0.1rem;
+  font-size: 1.75rem;
   font-weight: var(--w-extrabold);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.12em;
   color: var(--c-brand-strong);
+}
+
+.title-credit {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: var(--w-bold);
+  letter-spacing: 0.02em;
+  color: var(--c-muted);
 }
 
 .title-block p,

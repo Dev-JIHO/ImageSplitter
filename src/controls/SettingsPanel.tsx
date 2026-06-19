@@ -1,7 +1,7 @@
 import { useState, type KeyboardEvent, type ReactElement } from 'react';
 import { AdvancedHelpModal } from '../components/AdvancedHelpModal';
-import { InfoHint } from '../components/InfoHint';
 import { Chevron } from '../components/Chevron';
+import { InfoHint } from '../components/InfoHint';
 import type { LoadedImage } from '../lib/imageLoader';
 import type { ResolvedPrintScale } from '../lib/printScale';
 import type { LayoutState, LeftView } from '../types';
@@ -138,7 +138,8 @@ export function SettingsPanel({
 
       <div className="panel-scroll">
         <div className="title-block">
-          <h1>한 장 공 방</h1>
+          <h1>한  장  공  방</h1>
+          <p className="title-credit">feat. 굥쌤</p>
           <button
             type="button"
             className="help-button"
@@ -148,7 +149,7 @@ export function SettingsPanel({
           >
             ?
           </button>
-          <p>사진 한 장을 여러 A4로 나눠 큰 포스터로!</p>
+          <p>A4 용지뿐인데 저더러 그 커다란 걸 뽑으라구요..?</p>
         </div>
 
         {view === 'upload' ? (
