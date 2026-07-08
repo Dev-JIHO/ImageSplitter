@@ -239,6 +239,14 @@ export default function App() {
           onClose={onboarding.close}
           onViewChange={setLeftView}
         />
+
+        <div className="visitor-badge">
+          <img
+            src="https://visitor-badge.laobi.icu/badge?page_id=image-splitter-flax.vercel.app"
+            alt="방문자 수"
+            loading="lazy"
+          />
+        </div>
       </main>
     </SettingsProvider>
   );
