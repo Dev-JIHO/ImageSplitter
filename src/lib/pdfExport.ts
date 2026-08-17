@@ -20,6 +20,8 @@ export interface PdfExportOptions {
   /** 인쇄 배율 보정 (배율 고정 인쇄 앱 대응, 기본 1) */
   printScale?: number;
   filename?: string;
+  /** 페이지 생성 진행 상황 콜백 (1-base 현재 페이지, 전체 페이지 수) */
+  onProgress?: (current: number, total: number) => void;
 }
 
 export async function exportPosterPdf(options: PdfExportOptions) {
@@ -39,8 +41,10 @@ export async function exportPosterPdf(options: PdfExportOptions) {
   const sx = (value: number) => scaleAboutPageCenter(value, options.plan.page.widthMm, k);
   const sy = (value: number) => scaleAboutPageCenter(value, options.plan.page.heightMm, k);
 
-  for (let index = 0; index < options.layout.slices.length; index += 1) {
+  const totalSlices = options.layout.slices.length;
+  for (let index = 0; index < totalSlices; index += 1) {
     const slice = options.layout.slices[index];
+    options.onProgress?.(index + 1, totalSlices);
     if (index > 0) {
       pdf.addPage('a4', options.plan.orientation);
     }
@@ -177,5 +181,8 @@ function renderGlueMarksToPdf(
           pdf.line(x1, y1, x2, y2);
         }
       }
+
+      pdf.setLineWidth(GLUE_BORDER_LINE_WIDTH_MM);
+      pdf.rect(mark.xMm, mark.yMm, mark.widthMm, mark.heightMm);
     });
 }

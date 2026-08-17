@@ -1,5 +1,7 @@
 import { InfoHint } from '../components/InfoHint';
 import { NumberField } from '../components/NumberField';
+import { MAX_GRID_DIMENSION } from '../lib/geometry';
+import { MAX_TARGET_SIZE_MM } from '../lib/targetSize';
 import { useSettings } from '../SettingsContext';
 
 export function SizingModeSection() {
@@ -52,6 +54,7 @@ export function SizingModeSection() {
               label="행"
               value={settings.rows}
               min={1}
+              max={MAX_GRID_DIMENSION}
               step={1}
               onChange={(value) => updateSetting('rows', Math.round(value))}
             />
@@ -59,6 +62,7 @@ export function SizingModeSection() {
               label="열"
               value={settings.columns}
               min={1}
+              max={MAX_GRID_DIMENSION}
               step={1}
               onChange={(value) => updateSetting('columns', Math.round(value))}
             />
@@ -101,6 +105,7 @@ export function SizingModeSection() {
               label="완성 가로(mm)"
               value={settings.targetWidthMm}
               min={1}
+              max={MAX_TARGET_SIZE_MM}
               step={1}
               onChange={(value) => updateSetting('targetWidthMm', value)}
             />
@@ -108,6 +113,7 @@ export function SizingModeSection() {
               label="완성 세로(mm)"
               value={settings.targetHeightMm}
               min={1}
+              max={MAX_TARGET_SIZE_MM}
               step={1}
               onChange={(value) => updateSetting('targetHeightMm', value)}
             />

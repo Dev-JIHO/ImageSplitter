@@ -26,6 +26,10 @@ const VISITOR_BADGE_URL = 'https://visitor-badge.laobi.icu/badge?page_id=image-s
 export default function App() {
   const [settings, setSettings] = useState<Settings>(initialSettings);
   const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
+  const [exportProgress, setExportProgress] = useState<{ current: number; total: number } | null>(
+    null,
+  );
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [hasSeamTestExported, setHasSeamTestExported] = useState(false);
   const [activeMobilePanel, setActiveMobilePanel] = useState<MobilePanel>('settings');
@@ -103,6 +107,7 @@ export default function App() {
     if (!loadedImage || !preparedImage || !layoutState.plan || !layoutState.layout) return;
 
     setIsExporting(true);
+    setExportError('');
     try {
       // 무거운 캔버스 작업 전에 한 프레임 양보해 'PDF 생성 중' 상태가 화면에 그려지게 한다.
       await new Promise<void>((resolve) =>
@@ -126,21 +131,40 @@ export default function App() {
           targetWidthMm: layoutState.targetSize?.widthMm,
           targetHeightMm: layoutState.targetSize?.heightMm,
         }),
+        onProgress: (current, total) => setExportProgress({ current, total }),
       });
       setIsConfirmOpen(false);
+    } catch (error) {
+      console.error('PDF export failed', error);
+      setExportError(
+        error instanceof Error
+          ? `PDF를 만들지 못했습니다: ${error.message}`
+          : 'PDF를 만들지 못했습니다. 잠시 후 다시 시도해주세요.',
+      );
     } finally {
       setIsExporting(false);
+      setExportProgress(null);
     }
   }
 
   function handleExportSeamTest() {
-    setHasSeamTestExported(true);
-    exportSeamTestPdf({
-      orientation: layoutState.plan?.orientation ?? settings.orientation,
-      overlapMm: settings.overlapMm,
-      printerMarginMm: settings.printerMarginMm,
-      printScale: printScale.factor,
-    });
+    setExportError('');
+    try {
+      exportSeamTestPdf({
+        orientation: layoutState.plan?.orientation ?? settings.orientation,
+        overlapMm: settings.overlapMm,
+        printerMarginMm: settings.printerMarginMm,
+        printScale: printScale.factor,
+      });
+      setHasSeamTestExported(true);
+    } catch (error) {
+      console.error('Seam test PDF export failed', error);
+      setExportError(
+        error instanceof Error
+          ? `테스트 PDF를 만들지 못했습니다: ${error.message}`
+          : '테스트 PDF를 만들지 못했습니다. 잠시 후 다시 시도해주세요.',
+      );
+    }
   }
 
   const shellStyle = {
@@ -210,6 +234,7 @@ export default function App() {
           ready={ready}
           canPan={canPan}
           isExporting={isExporting}
+          exportProgress={exportProgress}
           onRequestExport={handleRequestExport}
           layoutState={layoutState}
         />
@@ -223,7 +248,23 @@ export default function App() {
             onCancel={() => setIsConfirmOpen(false)}
             onConfirm={handleExport}
             isExporting={isExporting}
+            exportProgress={exportProgress}
+            exportError={exportError}
           />
+        ) : null}
+
+        {!isConfirmOpen && exportError ? (
+          <div className="export-error-toast" role="alert">
+            <span>{exportError}</span>
+            <button
+              type="button"
+              className="export-error-toast-close"
+              onClick={() => setExportError('')}
+              aria-label="오류 메시지 닫기"
+            >
+              ×
+            </button>
+          </div>
         ) : null}
 
         <MobileBottomNav

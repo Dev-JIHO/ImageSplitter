@@ -240,6 +240,14 @@ export function SettingsPanel({
           오른쪽 도구의 “PDF 내보내기”로 저장해요
           <InfoHint>모바일에서는 아래 “미리보기” 탭에서 내보냅니다.</InfoHint>
         </p>
+
+        <nav className="footer-links" aria-label="정보 페이지">
+          <a href="/guide.html">사용법</a>
+          <a href="/faq.html">FAQ</a>
+          <a href="/about.html">소개</a>
+          <a href="/privacy.html">개인정보처리방침</a>
+          <a href="/terms.html">이용약관</a>
+        </nav>
       </div>
 
       {advHelpOpen ? <AdvancedHelpModal onClose={() => setAdvHelpOpen(false)} /> : null}

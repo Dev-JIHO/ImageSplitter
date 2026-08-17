@@ -2,6 +2,8 @@ import { describe, expect, test } from 'vitest';
 import {
   createManualGridPlan,
   getA4Size,
+  MAX_GRID_DIMENSION,
+  MAX_PAGE_COUNT,
   recommendTargetGrid,
 } from './geometry';
 
@@ -42,7 +44,7 @@ describe('geometry', () => {
         columns: 1,
         overlapMm: 0,
       }),
-    ).toThrow('Rows and columns must be positive integers.');
+    ).toThrow('행과 열은 1 이상의 정수여야 합니다.');
 
     expect(() =>
       createManualGridPlan({
@@ -51,7 +53,38 @@ describe('geometry', () => {
         columns: 1,
         overlapMm: 210,
       }),
-    ).toThrow('Overlap must be smaller than both page dimensions.');
+    ).toThrow('겹침(풀칠) 값은 용지의 가로·세로 길이보다 작아야 합니다.');
+  });
+
+  test('rejects grids that exceed the per-dimension or total page cap', () => {
+    expect(() =>
+      createManualGridPlan({
+        orientation: 'portrait',
+        rows: MAX_GRID_DIMENSION + 1,
+        columns: 1,
+        overlapMm: 0,
+      }),
+    ).toThrow(`행과 열은 각각 최대 ${MAX_GRID_DIMENSION}까지 입력할 수 있습니다.`);
+
+    expect(() =>
+      createManualGridPlan({
+        orientation: 'portrait',
+        rows: 20,
+        columns: 10,
+        overlapMm: 0,
+      }),
+    ).toThrow(`전체 페이지 수는 최대 ${MAX_PAGE_COUNT}장까지 지원합니다`);
+  });
+
+  test('rejects a target size that would require more than the page cap', () => {
+    expect(() =>
+      recommendTargetGrid({
+        targetWidthMm: 210 * 20,
+        targetHeightMm: 297 * 20,
+        overlapMm: 10,
+        orientation: 'portrait',
+      }),
+    ).toThrow(/최대 100장/);
   });
 
   test('recommends the fewest A4 sheets for a target size', () => {

@@ -117,7 +117,7 @@ export function createPosterLayout(
 ): PosterLayout {
   const { image, fitMode } = input;
   if (image.widthPx <= 0 || image.heightPx <= 0) {
-    throw new Error('Image dimensions must be positive.');
+    throw new Error('이미지 크기가 올바르지 않습니다.');
   }
 
   const contentFrame: RectMm = {

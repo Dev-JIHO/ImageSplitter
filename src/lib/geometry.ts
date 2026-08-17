@@ -44,6 +44,11 @@ const A4: Record<Orientation, PageSize> = {
   landscape: { widthMm: 297, heightMm: 210 },
 };
 
+/** 행/열 각각의 입력 상한. 이보다 큰 값은 캔버스·메모리 한계를 넘길 수 있다. */
+export const MAX_GRID_DIMENSION = 30;
+/** 전체 인쇄 페이지 수 상한. */
+export const MAX_PAGE_COUNT = 100;
+
 export function getA4Size(orientation: Orientation): PageSize {
   return { ...A4[orientation] };
 }
@@ -65,7 +70,7 @@ export function createManualGridPlan(input: ManualGridInput): GridPlan {
     printableHeightMm + (input.rows - 1) * (printableHeightMm - input.overlapMm);
 
   if (contentWidthMm <= 0 || contentHeightMm <= 0) {
-    throw new Error('Margin is too large for the selected grid.');
+    throw new Error('여백 값이 선택한 격자 크기에 비해 너무 큽니다.');
   }
 
   return {
@@ -85,8 +90,8 @@ export function createManualGridPlan(input: ManualGridInput): GridPlan {
 }
 
 export function recommendTargetGrid(input: TargetSizeInput): GridPlan {
-  assertPositiveNumber(input.targetWidthMm, 'Target width');
-  assertPositiveNumber(input.targetHeightMm, 'Target height');
+  assertPositiveNumber(input.targetWidthMm, '완성 가로');
+  assertPositiveNumber(input.targetHeightMm, '완성 세로');
   assertPrinterMargin(input.printerMarginMm ?? 0);
 
   const orientations: readonly Orientation[] = input.orientation
@@ -116,7 +121,12 @@ export function recommendTargetGrid(input: TargetSizeInput): GridPlan {
 
   const best = candidates[0];
   if (!best) {
-    throw new Error('Could not calculate a target grid.');
+    throw new Error('요청한 크기로 만들 수 있는 격자를 계산하지 못했습니다.');
+  }
+  if (best.pageCount > MAX_PAGE_COUNT) {
+    throw new Error(
+      `요청한 완성 크기를 만들려면 ${best.pageCount}장이 필요합니다(최대 ${MAX_PAGE_COUNT}장). 완성 크기를 줄이거나 여백·풀칠 값을 조정해주세요.`,
+    );
   }
   return best;
 }
@@ -171,32 +181,40 @@ function createTargetCandidates(
 
 function assertGrid(rows: number, columns: number) {
   if (!Number.isInteger(rows) || !Number.isInteger(columns) || rows < 1 || columns < 1) {
-    throw new Error('Rows and columns must be positive integers.');
+    throw new Error('행과 열은 1 이상의 정수여야 합니다.');
+  }
+  if (rows > MAX_GRID_DIMENSION || columns > MAX_GRID_DIMENSION) {
+    throw new Error(`행과 열은 각각 최대 ${MAX_GRID_DIMENSION}까지 입력할 수 있습니다.`);
+  }
+  if (rows * columns > MAX_PAGE_COUNT) {
+    throw new Error(
+      `전체 페이지 수는 최대 ${MAX_PAGE_COUNT}장까지 지원합니다. 행·열 값을 줄여주세요.`,
+    );
   }
 }
 
 function assertOverlap(overlapMm: number, page: PageSize) {
-  assertNonNegative(overlapMm, 'Overlap');
+  assertNonNegative(overlapMm, '겹침(풀칠) 값');
   if (overlapMm >= page.widthMm || overlapMm >= page.heightMm) {
-    throw new Error('Overlap must be smaller than both page dimensions.');
+    throw new Error('겹침(풀칠) 값은 용지의 가로·세로 길이보다 작아야 합니다.');
   }
 }
 
 function assertPrinterMargin(printerMarginMm: number) {
-  assertNonNegative(printerMarginMm, 'Printer margin');
+  assertNonNegative(printerMarginMm, '프린터 여백');
   if (printerMarginMm >= A4.portrait.widthMm / 2) {
-    throw new Error('Printer margin is too large.');
+    throw new Error('프린터 여백 값이 너무 큽니다.');
   }
 }
 
 function assertNonNegative(value: number, label: string) {
   if (!Number.isFinite(value) || value < 0) {
-    throw new Error(`${label} must be a non-negative number.`);
+    throw new Error(`${label}은(는) 0 이상의 숫자여야 합니다.`);
   }
 }
 
 function assertPositiveNumber(value: number, label: string) {
   if (!Number.isFinite(value) || value <= 0) {
-    throw new Error(`${label} must be a positive number.`);
+    throw new Error(`${label}은(는) 0보다 큰 숫자여야 합니다.`);
   }
 }

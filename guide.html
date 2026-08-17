@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#fff0f3" />
+    <meta
+      name="description"
+      content="한 장 공방 사용법: 큰 이미지를 A4 여러 장으로 나눠 인쇄하고 이어 붙여 포스터를 만드는 방법을 단계별로 안내합니다."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href="https://image-splitter-flax.vercel.app/guide.html" />
+    <title>사용법 - 한 장 공방</title>
+    <link rel="stylesheet" href="/src/content.css" />
+  </head>
+  <body>
+    <header class="content-header">
+      <a class="content-brand" href="/">한 장 공방</a>
+      <nav>
+        <a href="/guide.html" aria-current="page">사용법</a>
+        <a href="/faq.html">FAQ</a>
+        <a href="/about.html">소개</a>
+      </nav>
+    </header>
+
+    <main class="content">
+      <h1>사용법</h1>
+      <p class="lead">
+        사진 한 장을 A4 여러 장으로 나눠 인쇄한 뒤, 번호 순서대로 이어 붙이면 원하는 크기의
+        대형 포스터가 됩니다. 서버 업로드 없이 이 브라우저 안에서만 처리됩니다.
+      </p>
+
+      <h2>1. 화면 전환 탭</h2>
+      <p>왼쪽 패널의 세 탭으로 “사진 선택 · 포스터 설정 · 고급 설정” 화면을 오갈 수 있어요.</p>
+
+      <h2>2. 이미지 올리기</h2>
+      <p>
+        사진 파일을 선택하거나, 미리보기 영역으로 끌어다 놓거나, <strong>Ctrl+V</strong>로
+        클립보드 이미지를 바로 붙여넣을 수 있습니다. JPG, PNG, WebP, GIF, AVIF를 지원합니다.
+      </p>
+
+      <h2>3. 포스터 크기 정하기</h2>
+      <p>두 가지 방법 중 하나를 고르세요.</p>
+      <ul>
+        <li><strong>A4 장수로 만들기</strong> — 원하는 행·열 수를 직접 입력합니다.</li>
+        <li>
+          <strong>완성 크기로 만들기</strong> — 게시판 등 정확한 가로·세로(mm)를 입력하면
+          필요한 최소 A4 장수를 자동으로 계산합니다.
+        </li>
+      </ul>
+
+      <h2>4. 프린터 테스트로 정확하게 (권장)</h2>
+      <p>
+        프린터마다 실제 인쇄 크기가 조금씩 다를 수 있습니다. 본 인쇄 전에 “프린터
+        테스트(A4 2장)”를 먼저 인쇄해보세요.
+      </p>
+      <ol>
+        <li>고급 설정 탭에서 “테스트 PDF 받기(A4 2장)”를 눌러 인쇄합니다.</li>
+        <li>인쇄물에 그려진 100mm 사각형의 한 변을 자로 정확히 잽니다.</li>
+        <li>
+          잰 값을 “테스트 사각형 실측값”에 입력하면, 실제 크기에 맞도록 이후 모든 PDF가 자동
+          보정됩니다.
+        </li>
+      </ol>
+      <p>이 과정을 건너뛰면 완성된 포스터의 크기가 몇 mm씩 어긋날 수 있습니다.</p>
+
+      <h2>5. 미리보기로 확인·조정</h2>
+      <p>
+        분할 결과를 실시간으로 확인할 수 있습니다. 마우스 휠 또는 슬라이더로 확대하고, 드래그로
+        위치를 옮기고, 더블클릭으로 가운데 정렬할 수 있습니다.
+      </p>
+
+      <h2>6. PDF 내보내기</h2>
+      <p>
+        오른쪽 도구 패널에서 회전·확대·위치를 마지막으로 조정한 뒤 “PDF 내보내기”를 누르세요.
+        확인 화면에서 설정을 다시 검토한 뒤 내려받을 수 있습니다.
+      </p>
+
+      <h2>7. 인쇄 및 조립</h2>
+      <ul>
+        <li>인쇄 설정에서 반드시 <strong>“실제 크기(100%)”</strong>를 선택하고, “용지에 맞춤”은 꺼주세요.</li>
+        <li>페이지 번호(1-1, 1-2…) 순서대로, 빗금 표시된 풀칠 영역 위에 이웃 장을 겹쳐 붙이세요.</li>
+      </ul>
+
+      <div class="content-card">
+        <strong>지금 바로 만들어보세요</strong>
+        <p style="margin: 0.5rem 0 0">
+          회원가입도, 설치도 필요 없습니다. 브라우저에서 바로 이미지를 올려보세요.
+        </p>
+        <a class="cta-button" href="/">포스터 만들러 가기</a>
+      </div>
+    </main>
+
+    <footer class="content-footer">
+      <a href="/">홈</a>
+      <a href="/guide.html">사용법</a>
+      <a href="/faq.html">FAQ</a>
+      <a href="/about.html">소개</a>
+      <a href="/privacy.html">개인정보처리방침</a>
+      <a href="/terms.html">이용약관</a>
+    </footer>
+  </body>
+</html>

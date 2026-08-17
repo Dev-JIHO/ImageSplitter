@@ -5,6 +5,7 @@ export function NumberField(props: {
   label: string;
   value: number;
   min: number;
+  max?: number;
   step: number;
   disabled?: boolean;
   onChange: (value: number) => void;
@@ -28,7 +29,11 @@ export function NumberField(props: {
 
     const nextValue = Number(normalized);
     // 입력 도중에는 최소값 미만이어도 강제로 올리지 않고, 확정은 blur에서 한다.
-    if (Number.isFinite(nextValue) && nextValue >= props.min) {
+    if (
+      Number.isFinite(nextValue) &&
+      nextValue >= props.min &&
+      (props.max === undefined || nextValue <= props.max)
+    ) {
       props.onChange(nextValue);
     }
   }
@@ -39,16 +44,21 @@ export function NumberField(props: {
       setDraft(String(props.value));
       return;
     }
-    const clamped = Math.max(props.min, Number(draft));
+    const clamped = clampToRange(Number(draft));
     setDraft(String(clamped));
     props.onChange(clamped);
   }
 
   function stepDraft(direction: 1 | -1) {
     const base = draft === '' || !Number.isFinite(Number(draft)) ? props.value : Number(draft);
-    const nextValue = Math.max(props.min, roundNumber(base + props.step * direction));
+    const nextValue = clampToRange(roundNumber(base + props.step * direction));
     setDraft(String(nextValue));
     props.onChange(nextValue);
+  }
+
+  function clampToRange(value: number) {
+    const withMin = Math.max(props.min, value);
+    return props.max === undefined ? withMin : Math.min(props.max, withMin);
   }
 
   return (
@@ -59,6 +69,7 @@ export function NumberField(props: {
           type="text"
           inputMode="decimal"
           min={props.min}
+          max={props.max}
           step={props.step}
           value={draft}
           disabled={props.disabled}

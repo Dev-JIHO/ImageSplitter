@@ -15,6 +15,7 @@ export function PreviewSidebar({
   ready,
   canPan,
   isExporting,
+  exportProgress,
   onRequestExport,
   layoutState,
 }: {
@@ -24,6 +25,7 @@ export function PreviewSidebar({
   ready: boolean;
   canPan: boolean;
   isExporting: boolean;
+  exportProgress: { current: number; total: number } | null;
   onRequestExport: () => void;
   layoutState: LayoutState;
 }) {
@@ -152,13 +154,19 @@ export function PreviewSidebar({
                 disabled={!ready || isExporting}
                 onClick={onRequestExport}
               >
-                {isExporting ? 'PDF 생성 중…' : `PDF 내보내기 (${pageCount}장)`}
+                {isExporting
+                  ? exportProgress
+                    ? `PDF 생성 중… (${exportProgress.current}/${exportProgress.total}장)`
+                    : 'PDF 생성 중…'
+                  : `PDF 내보내기 (${pageCount}장)`}
               </button>
               <p className="hint-text small">
                 인쇄 후 1-1부터 행 순서대로, 빗금(풀칠) 영역 위에 이웃 장을 겹쳐 붙이세요.
               </p>
             </div>
           </>
+        ) : layoutState.error ? (
+          <p className="error-text">{layoutState.error}</p>
         ) : (
           <p className="hint-text">
             사진을 올리면 회전·확대·내보내기 도구가 여기에 표시됩니다.

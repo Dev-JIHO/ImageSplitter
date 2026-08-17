@@ -11,6 +11,8 @@ export function ExportConfirmModal({
   onCancel,
   onConfirm,
   isExporting,
+  exportProgress,
+  exportError,
 }: {
   plan: GridPlan;
   layout: PosterLayout;
@@ -19,6 +21,8 @@ export function ExportConfirmModal({
   onCancel: () => void;
   onConfirm: () => void;
   isExporting: boolean;
+  exportProgress?: { current: number; total: number } | null;
+  exportError?: string;
 }) {
   const zoomed = settings.imageScale > 1;
 
@@ -96,12 +100,23 @@ export function ExportConfirmModal({
             이미지 가장자리가 잘릴 수 있습니다. 잘림이 발생하면 여백을 3mm 이상으로 설정해주세요.
           </p>
         ) : null}
+        {exportError ? (
+          <p className="error-text" role="alert">
+            {exportError}
+          </p>
+        ) : null}
         <div className="modal-actions">
-          <button type="button" className="secondary-button" onClick={onCancel}>
+          <button type="button" className="secondary-button" onClick={onCancel} disabled={isExporting}>
             다시 확인하기
           </button>
           <button type="button" className="export-button" onClick={onConfirm} disabled={isExporting}>
-            {isExporting ? 'PDF 생성 중' : '확인하고 PDF 만들기'}
+            {isExporting
+              ? exportProgress
+                ? `PDF 생성 중… (${exportProgress.current}/${exportProgress.total}장)`
+                : 'PDF 생성 중'
+              : exportError
+                ? '다시 시도'
+                : '확인하고 PDF 만들기'}
           </button>
         </div>
       </section>
