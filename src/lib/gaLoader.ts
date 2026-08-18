@@ -17,8 +17,12 @@ export function loadGoogleAnalytics(measurementId: string): void {
   document.head.appendChild(script);
 
   window.dataLayer = window.dataLayer || [];
-  const gtag = (...args: unknown[]) => {
-    window.dataLayer?.push(args);
+  const dataLayer = window.dataLayer;
+  // gtag.js는 실제 arguments 객체를 기대한다. 화살표 함수의 rest 파라미터로 만든 배열을 넘기면
+  // 에러 없이 조용히 무시되어(collect 요청 자체가 나가지 않음) 실측 검증 전까지 알아채기 어렵다.
+  const gtag: (...args: unknown[]) => void = function () {
+    // eslint-disable-next-line prefer-rest-params -- gtag.js가 arguments 객체 형태를 요구함
+    dataLayer.push(arguments);
   };
   window.gtag = gtag;
 
