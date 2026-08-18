@@ -22,5 +22,5 @@ export const initialSettings: Settings = {
 };
 
 export const supportedImageAccept =
-  'image/jpeg,image/png,image/webp,image/gif,image/avif';
-export const supportedImageText = 'JPG, PNG, WebP, GIF, AVIF 지원';
+  'image/jpeg,image/png,image/webp,image/gif,image/avif,image/heic,image/heif,.heic,.heif';
+export const supportedImageText = 'JPG, PNG, WebP, GIF, AVIF, HEIC(아이폰 사진) 지원';

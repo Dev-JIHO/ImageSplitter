@@ -1,4 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react';
+import { useModalA11y } from '../hooks/useModalA11y';
 import type { LeftView } from '../types';
 
 type Art = 'intro' | 'upload' | 'size' | 'preview' | 'tools' | 'seamtest' | 'tip';
@@ -261,6 +262,38 @@ export function Onboarding({
 
   if (!active || !current) return null;
 
+  return (
+    <OnboardingCard
+      current={current}
+      step={step}
+      rect={rect}
+      onNext={onNext}
+      onPrev={onPrev}
+      onClose={onClose}
+    />
+  );
+}
+
+/**
+ * active 상태가 바뀌어도 Onboarding 자체는 마운트된 채로 유지되므로(early return),
+ * 포커스 트랩이 열릴 때마다 새로 걸리도록 카드 부분만 별도 컴포넌트로 분리해 마운트/언마운트한다.
+ */
+function OnboardingCard({
+  current,
+  step,
+  rect,
+  onNext,
+  onPrev,
+  onClose,
+}: {
+  current: Step;
+  step: number;
+  rect: DOMRect | null;
+  onNext: () => void;
+  onPrev: () => void;
+  onClose: () => void;
+}) {
+  const modalRef = useModalA11y<HTMLDivElement>(onClose);
   const isLast = step === STEPS.length - 1;
   const pad = 8;
   const vw = typeof window !== 'undefined' ? window.innerWidth : 1280;
@@ -285,7 +318,14 @@ export function Onboarding({
   }
 
   return (
-    <div className="onb-root" role="dialog" aria-modal="true" aria-label="온보딩 안내">
+    <div
+      ref={modalRef}
+      tabIndex={-1}
+      className="onb-root"
+      role="dialog"
+      aria-modal="true"
+      aria-label="온보딩 안내"
+    >
       <div className={`onb-backdrop ${spotlight ? '' : 'onb-backdrop-dim'}`} />
       {spotlight ? (
         <div

@@ -78,11 +78,20 @@ export function NumberField(props: {
           }}
           onChange={(event) => commitDraft(event.target.value)}
           onBlur={handleBlur}
+          onKeyDown={(event) => {
+            if (props.disabled) return;
+            if (event.key === 'ArrowUp') {
+              event.preventDefault();
+              stepDraft(1);
+            } else if (event.key === 'ArrowDown') {
+              event.preventDefault();
+              stepDraft(-1);
+            }
+          }}
         />
         <div className="number-stepper" aria-hidden={props.disabled}>
           <button
             type="button"
-            tabIndex={-1}
             disabled={props.disabled}
             aria-label={`${props.label} 증가`}
             onClick={() => stepDraft(1)}
@@ -91,7 +100,6 @@ export function NumberField(props: {
           </button>
           <button
             type="button"
-            tabIndex={-1}
             disabled={props.disabled}
             aria-label={`${props.label} 감소`}
             onClick={() => stepDraft(-1)}

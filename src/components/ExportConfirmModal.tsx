@@ -1,3 +1,4 @@
+import { useModalA11y } from '../hooks/useModalA11y';
 import type { GridPlan } from '../lib/geometry';
 import { round } from '../lib/num';
 import type { PosterLayout } from '../lib/posterLayout';
@@ -25,10 +26,21 @@ export function ExportConfirmModal({
   exportError?: string;
 }) {
   const zoomed = settings.imageScale > 1;
+  // 내보내기 중에는 Escape로 닫지 않는다 (취소 버튼도 이때 disabled됨).
+  const modalRef = useModalA11y<HTMLElement>(() => {
+    if (!isExporting) onCancel();
+  });
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <section className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="export-title">
+      <section
+        ref={modalRef}
+        tabIndex={-1}
+        className="confirm-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="export-title"
+      >
         <h2 id="export-title">PDF 만들기 전 확인</h2>
         <p className="confirm-count">
           A4 <strong>{layout.slices.length}장</strong>을 인쇄합니다.

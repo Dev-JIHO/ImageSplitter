@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { useModalA11y } from '../hooks/useModalA11y';
 
 const sheet = { fill: 'var(--c-surface)', stroke: 'var(--c-border-2)', strokeWidth: 2 } as const;
 
@@ -147,10 +148,13 @@ export function AdvancedHelpModal({ onClose }: { onClose: () => void }) {
   const [page, setPage] = useState(0);
   const current = PAGES[page];
   const isLast = page === PAGES.length - 1;
+  const modalRef = useModalA11y<HTMLElement>(onClose);
 
   return (
     <div className="modal-backdrop" role="presentation" onClick={onClose}>
       <section
+        ref={modalRef}
+        tabIndex={-1}
         className="help-modal"
         role="dialog"
         aria-modal="true"
