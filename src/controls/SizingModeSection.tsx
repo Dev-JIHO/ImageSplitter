@@ -27,8 +27,8 @@ export function SizingModeSection() {
         </button>
       </fieldset>
       <p className="hint-text">
-        장수를 알면 “A4 장수로 만들기”, 원하는 포스터 크기를 알면 “완성 크기로 만들기”를
-        고르세요.
+        장수를 알면 “A4 장수로 만들기”를, 원하는 포스터 크기를 알면 “완성 크기로
+        만들기”를 고르세요.
       </p>
 
       {settings.mode === 'manual' ? (

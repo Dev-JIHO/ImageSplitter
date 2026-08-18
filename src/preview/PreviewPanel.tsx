@@ -55,7 +55,7 @@ export function PreviewPanel({
         {ready && image && plan && layout ? (
           <PreviewCanvas image={image} plan={plan} layout={layout} />
         ) : (
-          <EmptyPreview />
+          <EmptyPreview onFileSelected={onFileSelected} />
         )}
       </div>
       <PreviewLegend />

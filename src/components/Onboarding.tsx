@@ -34,7 +34,7 @@ const STEPS: Step[] = [
     target: 'upload',
     art: 'upload',
     title: '2. 이미지 올리기',
-    body: '사진 파일을 선택하거나, 미리보기로 끌어다 놓거나, Ctrl+V로 붙여넣으세요.',
+    body: '사진 파일을 선택하세요. (컴퓨터에서는 미리보기로 끌어다 놓거나 Ctrl+V로 붙여넣을 수도 있어요.)',
     view: 'upload',
   },
   {
