@@ -238,7 +238,7 @@ export function SettingsPanel({
 
         <p className="hint-text export-hint">
           오른쪽 도구의 “PDF 내보내기”로 저장해요
-          <InfoHint>모바일에서는 아래 “미리보기” 탭에서 내보냅니다.</InfoHint>
+          <InfoHint>모바일에서는 아래 “미리보기” 탭에서 내보내요.</InfoHint>
         </p>
 
         <nav className="footer-links" aria-label="정보 페이지">

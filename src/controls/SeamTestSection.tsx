@@ -31,7 +31,7 @@ export function SeamTestSection({
           A4 2장으로 크기·이음새를 먼저 확인해요
           <InfoHint>
             포스터를 만들기 전에 테스트 2장을 인쇄해, 100mm 사각형이 정확한지와 이음새가
-            매끄러운지 확인할 수 있어요. 사진이 없어도 만들 수 있습니다.
+            매끄러운지 확인할 수 있어요. 사진이 없어도 만들 수 있어요.
           </InfoHint>
         </p>
         <button type="button" className="secondary-button" onClick={onExportSeamTest}>
@@ -50,7 +50,7 @@ export function SeamTestSection({
               인쇄된 네모를 자로 재서 입력하세요
               <InfoHint>
                 인쇄된 100mm 사각형이 실제 몇 mm인지 자로 재서 넣으면, 배율 조절이 안 되는
-                인쇄 앱(예: Epson Smart Panel)에서도 실제 크기에 맞게 PDF를 보정합니다.
+                인쇄 앱(예: Epson Smart Panel)에서도 실제 크기에 맞게 PDF를 보정해요.
                 정확히 100mm면 그대로 두세요.
               </InfoHint>
             </p>

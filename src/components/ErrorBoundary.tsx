@@ -19,7 +19,7 @@ export class ErrorBoundary extends Component<
       return (
         <div className="app-crash-screen" role="alert">
           <h1>문제가 발생했어요</h1>
-          <p>예상치 못한 오류로 화면을 표시할 수 없습니다. 새로고침하면 대부분 해결됩니다.</p>
+          <p>예상치 못한 오류로 화면을 표시할 수 없어요. 새로고침하면 대부분 해결돼요.</p>
           <button type="button" className="export-button" onClick={() => window.location.reload()}>
             새로고침
           </button>

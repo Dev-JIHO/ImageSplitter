@@ -24,7 +24,7 @@ export function DisplayOptionsSection() {
           <span>페이지 경계선 표시</span>
         </label>
         <p className="hint-text">
-          미리보기와 PDF에 보이는 안내 표시입니다. 인쇄물에 선이 남지 않게 하려면 경계선을
+          미리보기와 PDF에 보이는 안내 표시예요. 인쇄물에 선이 남지 않게 하려면 경계선을
           꺼주세요.
         </p>
       </div>

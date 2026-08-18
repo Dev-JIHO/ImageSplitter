@@ -33,7 +33,7 @@ export async function exportPosterPdf(options: PdfExportOptions) {
   const scratch = document.createElement('canvas');
   const context = scratch.getContext('2d');
   if (!context) {
-    throw new Error('Canvas를 사용할 수 없습니다.');
+    throw new Error('그리기 기능을 사용할 수 없습니다. 다른 브라우저(Chrome, Edge 등)를 사용해보세요.');
   }
 
   // 인쇄 배율 보정: 페이지 중심 기준으로 모든 mm 좌표를 확대/축소

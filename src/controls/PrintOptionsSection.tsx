@@ -18,7 +18,7 @@ export function PrintOptionsSection() {
               className={settings.printerMarginMm === margin ? 'active' : ''}
               onClick={() => updateSetting('printerMarginMm', margin)}
             >
-              {margin === 0 ? '없음(전체인쇄용)' : `${margin}mm${margin === 5 ? ' (권장)' : ''}`}
+              {margin === 0 ? '없음(전체 인쇄용)' : `${margin}mm${margin === 5 ? ' (권장)' : ''}`}
             </button>
           ))}
         </fieldset>

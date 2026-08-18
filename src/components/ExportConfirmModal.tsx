@@ -108,8 +108,9 @@ export function ExportConfirmModal({
         </p>
         {settings.printerMarginMm <= 0 ? (
           <p className="modal-warning">
-            여백 설정이 없음입니다. 대부분의 프린터는 종이 가장자리 3~5mm를 인쇄하지 못해
-            이미지 가장자리가 잘릴 수 있습니다. 잘림이 발생하면 여백을 3mm 이상으로 설정해주세요.
+            여백이 “없음”으로 설정되어 있습니다. 대부분의 프린터는 종이 가장자리 3~5mm를
+            인쇄하지 못해 이미지 가장자리가 잘릴 수 있습니다. 잘림이 발생하면 여백을 3mm
+            이상으로 설정해주세요.
           </p>
         ) : null}
         {exportError ? (

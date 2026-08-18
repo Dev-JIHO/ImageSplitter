@@ -1,7 +1,7 @@
 export function EmptyPreview() {
   return (
     <div className="empty-preview">
-      <strong>사진을 이 영역에 끌어다 놓으면 바로 시작됩니다.</strong>
+      <strong>사진을 이 영역에 끌어다 놓으면 바로 시작돼요.</strong>
       <ol className="empty-steps">
         <li>사진을 여기에 끌어다 놓거나, 붙여넣기(Ctrl+V)하거나, 왼쪽 “사진 선택” 탭에서 고르세요.</li>
         <li>A4 장수 또는 완성 크기를 정하세요.</li>

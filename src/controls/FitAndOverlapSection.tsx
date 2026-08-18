@@ -35,8 +35,8 @@ export function FitAndOverlapSection() {
         <p className="hint-text">
           이어 붙일 때 겹치는 여백이에요
           <InfoHint>
-            가장자리에 남길 겹침 탭 크기(mm)입니다. 0이면 겹침 없이 나뉩니다. 탭이 없는
-            최하단·최우측 모서리 장에는 페이지 번호가 표시되지 않습니다.
+            가장자리에 남길 겹침 탭 크기(mm)예요. 0이면 겹침 없이 나뉘어요. 탭이 없는
+            최하단·최우측 모서리 장에는 페이지 번호가 표시되지 않아요.
           </InfoHint>
         </p>
       </div>

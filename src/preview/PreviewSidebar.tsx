@@ -169,7 +169,7 @@ export function PreviewSidebar({
           <p className="error-text">{layoutState.error}</p>
         ) : (
           <p className="hint-text">
-            사진을 올리면 회전·확대·내보내기 도구가 여기에 표시됩니다.
+            사진을 올리면 회전·확대·내보내기 도구가 여기에 표시돼요.
           </p>
         )}
       </div>

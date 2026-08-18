@@ -48,7 +48,7 @@ export function PreviewPanel({
     >
       {isDraggingFile ? (
         <div className="drop-overlay" aria-hidden>
-          사진을 여기에 놓으면 불러옵니다
+          사진을 여기에 놓으면 불러와요
         </div>
       ) : null}
       <div className="preview-scroll">
