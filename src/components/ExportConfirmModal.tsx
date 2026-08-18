@@ -1,3 +1,4 @@
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useModalA11y } from '../hooks/useModalA11y';
 import type { GridPlan } from '../lib/geometry';
 import { round } from '../lib/num';
@@ -30,6 +31,7 @@ export function ExportConfirmModal({
   const modalRef = useModalA11y<HTMLElement>(() => {
     if (!isExporting) onCancel();
   });
+  useBodyScrollLock();
 
   return (
     <div className="modal-backdrop" role="presentation">

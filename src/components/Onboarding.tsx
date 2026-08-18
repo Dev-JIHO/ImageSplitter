@@ -26,7 +26,7 @@ const STEPS: Step[] = [
     target: 'views',
     art: 'intro',
     title: '1. 화면 전환 탭',
-    body: '왼쪽의 세 탭으로 “사진 선택 · 포스터 설정 · 고급 설정” 화면을 오갈 수 있어요.',
+    body: '세 개의 탭으로 “사진 선택 · 포스터 설정 · 고급 설정” 화면을 오갈 수 있어요.',
     view: 'upload',
   },
   {
@@ -58,14 +58,14 @@ const STEPS: Step[] = [
     target: 'preview',
     art: 'preview',
     title: '5. 미리보기로 확인·조정',
-    body: '분할 결과를 실시간 확인. 휠·슬라이더로 확대, 드래그로 위치를 맞춰요.',
+    body: '분할 결과를 실시간 확인. 슬라이더나 두 손가락으로 확대하고, 드래그로 위치를 맞춰요.',
   },
   {
     kind: 'spot',
     target: 'tools',
     art: 'tools',
     title: '6. 도구와 PDF 내보내기',
-    body: '오른쪽 도구에서 회전·확대·위치를 조정하고 “PDF 내보내기”로 저장.',
+    body: '도구에서 회전·확대·위치를 조정하고 “PDF 내보내기”로 저장하세요.',
   },
   {
     kind: 'tip',

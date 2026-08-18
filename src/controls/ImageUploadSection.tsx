@@ -37,10 +37,10 @@ export function ImageUploadSection({
         ) : null}
       </div>
 
-      <p className="hint-text">
+      <p className="hint-text pointer-fine-only">
         끌어다 놓기·붙여넣기(Ctrl+V)도 돼요
         <InfoHint>
-          오른쪽 미리보기 영역에 사진을 끌어다 놓거나, 복사한 이미지를 Ctrl+V로
+          미리보기 영역에 사진을 끌어다 놓거나, 복사한 이미지를 Ctrl+V로
           붙여넣을 수 있어요. 지원 형식: {supportedImageText}.
         </InfoHint>
       </p>

@@ -657,6 +657,13 @@ input:focus-visible {
   font-size: 0.9375rem;
 }
 
+/* 마우스 전제 기능(드래그·Ctrl+V 등) 안내는 터치 기기에서 숨긴다. */
+@media (pointer: coarse) {
+  .pointer-fine-only {
+    display: none;
+  }
+}
+
 .crop-controls,
 .image-adjust-panel {
   display: grid;
@@ -964,7 +971,9 @@ input:focus-visible {
   border-radius: 0;
   background: var(--c-surface);
   box-shadow: var(--shadow-2);
-  touch-action: none;
+  /* 세로 스크롤은 브라우저에 양보하되(pinch-zoom은 포함하지 않음) 두 손가락 핀치는
+     계속 useCropDrag의 포인터 이벤트로 들어와 앱 자체 확대(imageScale)에 쓰인다. */
+  touch-action: pan-y;
 }
 
 .preview-canvas.is-draggable {
@@ -1024,7 +1033,9 @@ input:focus-visible {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 10;
+  /* .mobile-bottom-nav(20)보다 위, 온보딩(.onb-root, 50)보다 아래 — 모바일 하단 탭바가
+     확인 버튼을 가려 탭이 아예 안 먹히던 문제 수정. */
+  z-index: 30;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1033,11 +1044,16 @@ input:focus-visible {
 }
 
 .confirm-modal {
+  display: flex;
+  flex-direction: column;
   width: min(27.5rem, 100%);
+  max-height: calc(100dvh - 2.25rem);
   padding: 1.25rem;
   border-radius: var(--r-md);
   background: var(--c-surface);
   box-shadow: var(--shadow-3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .confirm-modal h2 {
@@ -1080,6 +1096,13 @@ input:focus-visible {
   display: grid;
   grid-template-columns: 1fr 1.3fr;
   gap: 0.625rem;
+  /* 내용이 길어져 모달이 스크롤돼도 확인/취소 버튼은 항상 보이도록 하단에 고정. */
+  position: sticky;
+  bottom: 0;
+  margin: 0.5rem -1.25rem -1.25rem;
+  padding: 0.75rem 1.25rem calc(0.75rem + env(safe-area-inset-bottom));
+  background: var(--c-surface);
+  box-shadow: 0 -0.375rem 0.75rem rgba(31, 41, 51, 0.06);
 }
 
 .mobile-bottom-nav {
@@ -1097,6 +1120,11 @@ input:focus-visible {
     height: auto;
     overflow: visible;
     padding: 0.75rem 0.75rem 4.875rem;
+  }
+
+  /* 내보내기 버튼이 하단 고정 바로 뜨는 미리보기 탭에서만 그만큼 여백을 더 확보한다. */
+  .app-shell:has(.tools-panel[data-mobile-active="true"]) {
+    padding-bottom: 9rem;
   }
 
   .control-panel {
@@ -1120,13 +1148,19 @@ input:focus-visible {
     display: none;
   }
 
-  /* 모바일: 세로 엣지 탭 대신 패널 상단 가로 탭 바로 표시(설정 화면 접근). */
+  /* 모바일: 세로 엣지 탭 대신 패널 상단 가로 탭 바로 표시(설정 화면 접근).
+     스크롤해서 내려가도 탭을 계속 쓸 수 있도록 상단에 고정한다 — 안 그러면
+     탭을 바꾸려고 매번 맨 위로 되돌아가야 한다. */
   .app-shell .panel-view-tabs {
-    position: static;
+    position: sticky;
+    top: 0;
+    z-index: 12;
     flex-direction: row;
-    width: 100%;
+    width: auto;
     gap: 0.5rem;
-    margin-bottom: 0.75rem;
+    margin: 0 -1rem 0.75rem;
+    padding: 0.75rem 1rem 0.5rem;
+    background: var(--c-surface);
   }
 
   .app-shell .panel-view-tab {
@@ -1137,6 +1171,17 @@ input:focus-visible {
     padding: 0.625rem 0.5rem;
     border: 2px solid var(--c-border);
     border-radius: var(--r-sm);
+    /* 데스크톱은 세로 엣지 탭이라 "흰색=패널과 이어짐"이 통하지만, 가로로 나열되는
+       모바일 탭에서는 그 은유가 사라져 채워진 색이 오히려 "선택됨"으로 읽힌다 — 반전. */
+    background: var(--c-surface);
+    color: var(--c-brand-strong);
+  }
+
+  .app-shell .panel-view-tab[data-active='true'],
+  .app-shell .panel-view-tab[data-active='true']:hover {
+    background: var(--c-brand);
+    border-color: var(--c-brand);
+    color: #fff;
   }
 
   .app-shell .panel-view-tab-label {
@@ -1148,11 +1193,14 @@ input:focus-visible {
     font-size: 0.875rem;
   }
 
-  /* 모바일 탭은 항상 가로 펼침 상태이므로 hover 변형을 무력화. */
+  /* 모바일 탭은 항상 가로 펼침 상태이고 터치 탭 이후에도 :hover가 남을 수 있어(특히
+     안드로이드 브라우저), 데스크톱용 hover 배경(--c-brand-strong)이 새지 않도록 무력화. */
   .app-shell .panel-view-tab:hover,
   .app-shell .panel-view-tab:focus-visible {
     justify-content: center;
     padding: 0.625rem 0.5rem;
+    background: var(--c-surface);
+    color: var(--c-brand-strong);
   }
 
   .control-panel[data-collapsed="true"] > :not(.panel-toggle),
@@ -1164,6 +1212,24 @@ input:focus-visible {
   .tools-panel[data-collapsed="true"] {
     padding: 1rem;
     align-items: stretch;
+  }
+
+  /* 로고·태그라인 블록이 139px을 차지하고 탭을 바꿀 때마다 반복돼 화면의 첫 60%가
+     실제 컨트롤 없이 소모되던 문제 — 모바일에서는 브랜드 표시만 남기고 축소. */
+  .title-block {
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .title-block h1 {
+    margin-top: 0;
+    font-size: 1.375rem;
+    letter-spacing: 0.08em;
+  }
+
+  .title-credit,
+  .title-block > p {
+    display: none;
   }
 
   .tools-panel {
@@ -1226,6 +1292,44 @@ input:focus-visible {
     text-align: left;
   }
 
+  /* 세로로 쌓인 28x21px +/- 스테퍼는 오탭이 잦다 — 입력창 양옆 가로 배치로 바꿔 44px 타깃을
+     서로 멀리 떨어뜨린다. NumberField.tsx DOM 순서(+ 가 먼저, - 가 나중)는 그대로 두고
+     grid-column으로만 자리를 바꾼다. */
+  .number-input-control {
+    grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+  }
+
+  .number-stepper {
+    display: contents;
+  }
+
+  .number-stepper button {
+    min-height: 2.75rem;
+    font-size: 1.125rem;
+  }
+
+  .number-stepper button:first-child {
+    grid-row: 1;
+    grid-column: 3;
+    border-left: 0;
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  }
+
+  .number-stepper button:last-child {
+    grid-row: 1;
+    grid-column: 1;
+    border-right: 0;
+    border-left: 1px solid var(--c-border-2);
+    border-radius: var(--r-sm) 0 0 var(--r-sm);
+  }
+
+  .number-input-control input {
+    grid-row: 1;
+    grid-column: 2;
+    border-radius: 0;
+    text-align: center;
+  }
+
   .preview-canvas {
     max-height: calc(100dvh - 15.625rem);
     object-fit: contain;
@@ -1239,6 +1343,26 @@ input:focus-visible {
 
   .preview-canvas.is-draggable {
     touch-action: none;
+  }
+
+  /* 내보내기가 미리보기 탭 맨 아래에 파묻혀 두 화면을 스크롤해야 닿던 문제 — 하단 탭바 바로
+     위에 고정한다. 탭바가 display:none이면(다른 모바일 탭) 조상인 .tools-panel도 숨겨지므로
+     같이 사라진다. */
+  .export-group {
+    position: fixed;
+    right: 0;
+    bottom: 3.8125rem;
+    left: 0;
+    z-index: 15;
+    padding: 0.5rem 0.75rem;
+    background: var(--c-surface);
+    border-top: 1px solid var(--c-border);
+  }
+
+  /* 모달이 z-index로는 하단 탭바 위에 뜨지만, 원래 중앙 정렬 계산은 탭바를 모르므로
+     여전히 살짝 겹칠 수 있다 — 탭바 높이만큼 아래쪽 공간을 비워 그 안에서 중앙 정렬되게 한다. */
+  .modal-backdrop {
+    padding-bottom: calc(3.8125rem + 1.125rem);
   }
 
   .mobile-bottom-nav {
@@ -1270,6 +1394,42 @@ input:focus-visible {
     background: var(--c-brand);
     color: var(--c-surface);
   }
+
+  /* 체크박스·정보 아이콘·도움말 버튼·푸터 링크 — 권장 44px에 못 미치던 탭 영역 확대. */
+  .check-field {
+    min-height: 2.75rem;
+  }
+
+  .check-field input {
+    width: 1.375rem;
+    height: 1.375rem;
+  }
+
+  .info-hint-btn,
+  .adv-help-button,
+  .help-button {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  .footer-links {
+    gap: 0.75rem 1rem;
+  }
+
+  .footer-links a {
+    display: inline-block;
+    padding: 0.5rem 0;
+  }
+
+  .onb-skip {
+    min-height: 2.75rem;
+    padding-inline: 0.75rem;
+  }
+
+  /* 확대 슬라이더 트랙이 16px라 엄지로 잡기 어렵던 문제 — 트랙 높이는 유지하고 히트 영역만 키운다. */
+  .zoom-control input[type='range'] {
+    height: 2.75rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1285,6 +1445,21 @@ input:focus-visible {
 
   .summary dd {
     text-align: left;
+  }
+}
+
+@media (max-width: 360px) {
+  /* 320px 폭에서 "포스터 설정" 같은 라벨이 잘리는 문제 — 아이콘을 접어 라벨에 공간을 더 준다. */
+  .app-shell .panel-view-tab svg {
+    display: none;
+  }
+
+  .app-shell .panel-view-tab {
+    padding-inline: 0.25rem;
+  }
+
+  .app-shell .panel-view-tab-label {
+    font-size: 0.8125rem;
   }
 }
 

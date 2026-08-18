@@ -126,6 +126,8 @@ export function SettingsPanel({
             onClick={() => {
               onViewChange(tab.id);
               if (collapsed) onToggleCollapse();
+              // 모바일에서 스크롤한 채로 탭을 바꾸면 새 탭 내용이 중간부터 보이는 문제 방지.
+              window.scrollTo({ top: 0 });
             }}
             onKeyDown={(event) => handleTabKey(event, index)}
             title={tab.label}
@@ -237,7 +239,7 @@ export function SettingsPanel({
         </p>
 
         <p className="hint-text export-hint">
-          오른쪽 도구의 “PDF 내보내기”로 저장해요
+          “PDF 내보내기”로 저장해요
           <InfoHint>모바일에서는 아래 “미리보기” 탭에서 내보내요.</InfoHint>
         </p>
 

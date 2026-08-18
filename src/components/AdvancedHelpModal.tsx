@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useModalA11y } from '../hooks/useModalA11y';
 
 const sheet = { fill: 'var(--c-surface)', stroke: 'var(--c-border-2)', strokeWidth: 2 } as const;
@@ -149,6 +150,7 @@ export function AdvancedHelpModal({ onClose }: { onClose: () => void }) {
   const current = PAGES[page];
   const isLast = page === PAGES.length - 1;
   const modalRef = useModalA11y<HTMLElement>(onClose);
+  useBodyScrollLock();
 
   return (
     <div className="modal-backdrop" role="presentation" onClick={onClose}>
