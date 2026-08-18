@@ -29,13 +29,45 @@
 - `src/lib/adsenseLoader.test.ts` 추가, 타입체크·전체 유닛테스트(74개) 통과 확인
 - 실제 client ID/slot ID는 비어 있어 `AdSlot`은 현재 아무것도 렌더링하지 않음 — 아직 어떤 페이지에도 마운트되어 있지 않음
 
-## 남은 작업 (사용자 확인/결정 필요)
+### 4단계 — 개인정보처리방침·이용약관 법률 검토 및 전면 개정
+Opus를 이용해 대한민국 「개인정보 보호법」·「약관의 규제에 관한 법률」·「전자상거래법」·「정보통신망법」 기준으로 면밀 검토. 상세 보고서: `docs/legal-review-privacy-terms.md`.
 
-### 1. 문의 이메일 확정
-아래 3곳에 `<!-- TODO -->` 주석으로 자리만 잡아뒀습니다. 이메일이 정해지면 문장을 `mailto:` 링크로 교체해야 합니다.
-- `about.html:56`
-- `privacy.html:90`
-- `terms.html:90`
+- 개인정보 보호책임자 연락처 미기재(법 §30①6, 과태료 근거) 등 법정 필수 기재사항 다수 누락 확인 → `privacy.html` `<main>` 전면 개정(14개 항목: 처리목적·항목·보유기간·안전성 확보조치·정보주체 권리·권익침해 구제방법 등 신설)
+- `terms.html` 면책조항이 약관법 제7조에 저촉되어 무효 소지가 높았던 부분(직접·간접·부수적 손해 전면 배제) 재작성, 미성년자·이용제한·준거법 조항 신설
+- 문의 이메일을 `ssabu.jst@gmail.com`으로 확정 — `about.html`/`privacy.html`/`terms.html` 3곳 모두 mailto 링크로 반영 완료 (더 이상 남은 TODO 없음)
+- 전자상거래법은 무상 서비스라 적용되지 않음(사업자등록번호 표시 의무 없음) 확인. 정보통신망법의 개인정보 조항은 2020년 개인정보보호법으로 전부 이관되어 현재 존재하지 않으므로 인용 근거로 쓰면 안 됨(보고서에 상세 근거·출처 정리)
+- 브라우저 구동 확인(스크린샷·mailto 링크·h2 섹션 수) 및 빌드·lint·테스트 통과 확인 완료
+
+### 5단계 — 방문자 배지 제거 (laobi.icu)
+"방문자 수를 정확하게 집계"하려던 기존 시도(`visitor-badge.laobi.icu`)를 점검한 결과, 애초에 목적을 달성할 수 없는 도구였음을 확인:
+- React StrictMode 이중 마운트로 인한 중복 카운트는 아님(dev·prod 빌드 모두 Playwright로 요청 1회만 발생하는 것을 직접 확인)
+- 다만 이 배지 자체가 **IP/세션 기준 중복 제거가 없는 단순 히트 카운터**임을 확인(상위 오픈소스 프로젝트 이슈 트래커에 "새로고침마다 중복 카운트" 제보 존재) — "방문자 수"가 아니라 "페이지 로드 횟수"였음
+- 광고 차단기(uBlock Origin·Brave·Safari ITP 등)에 흔히 차단되어 실제보다 낮게 집계됨
+- 기반 프로젝트(jwenjian/visitor-badge)가 GitHub에 "[Service is DOWN now]"로 명시된 소규모 개인 서비스라 존속성 불확실(법률 검토 보고서에서도 같은 이유로 제거 권고)
+- 커스텀 도메인 연결 시 `page_id`가 바뀌어 카운트가 0으로 초기화되는 문제도 있었음
+
+→ **배지를 완전히 제거함**: `src/App.tsx`(VISITOR_BADGE_URL 및 렌더링), `src/App.css`(`.visitor-badge` 관련 스타일), `privacy.html` 5항의 visitor-badge 항목.
+
+### 6단계 — 방문자 통계 도구 선정 (Vercel Analytics → Google Analytics 4로 최종 변경)
+처음엔 Vercel Analytics(쿠키 없음, 설치 간단)를 붙였으나, **애드센스를 도입할 계획**이라는 점을 고려해 **GA4로 교체**했습니다. 애드센스가 켜지면 어차피 Google 광고 쿠키가 깔리므로 GA4를 추가해도 프라이버시 측면에서 새로 감수할 게 거의 없고, GA4는 애드센스 계정과 연동해 "트래픽 대비 광고 수익(RPM)" 같은 결합 리포트를 볼 수 있어 광고 운영에 실질적으로 더 유용합니다. Vercel Analytics는 이런 연동이 불가능해 제거했습니다.
+
+**GA4 스캐폴딩 (애드센스 스캐폴딩과 동일한 패턴 — 승인/발급 전이라 아직 아무것도 전송되지 않음):**
+- `src/lib/gaConfig.ts` — `GA_MEASUREMENT_ID`(G-XXXXXXXXXX 형식). 현재 빈 문자열이라 아무 요청도 발생하지 않음(프리뷰로 확인 완료: 요청 0회, 실패 응답 0건)
+- `src/lib/gaLoader.ts` — `gtag.js` 지연 로드 + 중복 삽입 방지 가드. `gaLoader.test.ts`로 검증(3개 테스트)
+- `src/analytics.ts` — React 앱(`main.tsx`)과 정적 페이지(`guide`/`faq`/`about`/`privacy`/`terms`.html) 양쪽이 공유하는 진입점. HTML 쪽 `<script type="module" src="/src/analytics.ts">` 태그는 이전 Vercel Analytics 때 넣어둔 걸 그대로 재사용(파일 내용만 교체)
+- `privacy.html` 4항(쿠키)·5항(제3자 서비스)에 Google Analytics 쿠키(`_ga`, `_ga_*`, 보관기간 2개월)·수집 항목·옵트아웃 링크 반영
+
+**사용자가 직접 해야 하는 일** (Google 계정 로그인이 필요해 에이전트가 대신 할 수 없음):
+- [x] [analytics.google.com](https://analytics.google.com)에서 GA4 속성 생성 → 측정 ID `G-TM1T7HXC2P` 발급받아 `src/lib/gaConfig.ts`에 반영 완료. 프리뷰로 `gtag.js` 요청이 실제로 나가는 것까지 확인함(앱·정적 페이지 모두)
+- [ ] 애드센스 승인 후, GA4 관리자 설정에서 애드센스 계정과 연동(Admin → Product Links → AdSense Links)하면 트래픽·광고수익 결합 리포트를 볼 수 있음
+
+> 참고: GA4 관리자 화면의 "스트림 ID"(숫자, 데이터 스트림 자체의 내부 식별자)는 코드에서 쓰지 않습니다. `gtag.js`에 넘기는 값은 측정 ID(`G-`로 시작)뿐입니다.
+
+**남은 후속 작업** (보고서 §5 "사용자 확인 필요 항목" 중 미확정):
+- Google Fonts self-host 전환 여부 — GDPR/국외이전 고지 항목을 하나 줄이고 성능도 개선(법적 필수는 아님)
+- 애드센스 게재 시작 시 `privacy.html` 6항의 "현재 광고가 게재되고 있지 않습니다" 문구 제거 필요(보고서 §5 체크리스트로 `adsense-launch-todo.md`에 이미 반영)
+
+## 남은 작업 (사용자 확인/결정 필요)
 
 ### 2. 커스텀 도메인 연결
 현재 `image-splitter-flax.vercel.app`로 하드코딩되어 있습니다. 도메인을 연결하면 아래 7개 파일의 URL을 새 도메인으로 일괄 교체해야 합니다.
@@ -47,7 +79,8 @@
 Google 애드센스 콘솔에서 사용자가 직접 진행해야 하는 단계입니다(에이전트가 대신 신청 불가). 위 1·2번이 끝나고 사이트가 실제로 그 도메인에서 서비스되고 있어야 신청 가능합니다. 신청 전 체크:
 - [ ] Search Console에 등록하고 `sitemap.xml` 제출, 색인 확인
 - [ ] 커스텀 도메인 연결 완료
-- [ ] 문의 이메일 반영 완료
+- [x] 문의 이메일 반영 완료 (`ssabu.jst@gmail.com`)
+- [x] 개인정보처리방침·이용약관 법정 필수 기재사항 반영 완료 (아래 4단계 참고)
 
 ### 4. 승인 후 해야 할 일
 
@@ -58,6 +91,7 @@ Google 애드센스 콘솔에서 사용자가 직접 진행해야 하는 단계�
 
 남은 일:
 - `ads.txt`를 `public/`에 추가 (애드센스 콘솔에서 발급하는 내용 그대로)
+- `privacy.html` 6항의 “현재 이 서비스에는 광고가 게재되고 있지 않으며…” 문구 제거 + 시행일자 갱신(`docs/legal-review-privacy-terms.md` §5 체크리스트)
 - `adsenseConfig.ts`에 실제 client ID·slot ID 채우기
 - `guide.html`/`faq.html`/`about.html`은 현재 순수 정적 HTML(React 마운트 없음)이라, `AdSlot`을 쓰려면 각 페이지에 React 마운트 포인트를 추가하거나, 애드센스가 제공하는 `<ins>` + 스크립트 스니펫을 정적 HTML에 직접 삽입하는 더 단순한 방식 중 하나를 승인 후 결정해서 반영해야 함
 - 광고 유닛은 **콘텐츠 페이지(`guide`/`faq`/`about`)에만** 수동으로 삽입 — 도구 화면(`App.tsx`)에는 넣지 않는 것을 권장(`.app-shell`이 `height:100vh; overflow:hidden` 구조라 물리적 공간도 없음)

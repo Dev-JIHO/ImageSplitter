@@ -21,7 +21,6 @@ import type { LeftView, MobilePanel, Settings } from './types';
 
 const PANEL_MIN_PX = 220;
 const PANEL_MAX_PX = 560;
-const VISITOR_BADGE_URL = 'https://visitor-badge.laobi.icu/badge?page_id=image-splitter-flax.vercel.app';
 
 export default function App() {
   const [settings, setSettings] = useState<Settings>(initialSettings);
@@ -281,10 +280,6 @@ export default function App() {
           onClose={onboarding.close}
           onViewChange={setLeftView}
         />
-
-        <div className="visitor-badge">
-          <img src={VISITOR_BADGE_URL} alt="조회수" />
-        </div>
       </main>
     </SettingsProvider>
   );
